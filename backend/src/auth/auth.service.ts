@@ -68,4 +68,20 @@ export class AuthService {
 
     return { accessToken: token };
   }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      xpTotal: user.xpTotal,
+      level: user.level,
+    };
+  }
 }
