@@ -23,5 +23,70 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  categories Category[]
+  tasks Task[]
   @@map("users")
+}
+
+enum TaskType {
+  DAILY
+  WEEKLY
+  LIFE
+  SIDE_QUEST
+}
+
+enum CompletionMode {
+  BOOLEAN
+  PROGRESS
+}
+
+enum TaskStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  icon        String?
+  isTemplate  Boolean  @default(false)
+  order       Int      @default(0)
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Task {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  categoryId      String
+  category        Category       @relation(fields: [categoryId], references: [id])
+  parentTaskId    String?
+  parentTask      Task?          @relation("Subtasks", fields: [parentTaskId], references: [id])
+  subtasks        Task[]         @relation("Subtasks")
+  title           String
+  type            TaskType       @default(SIDE_QUEST)
+  completionMode  CompletionMode @default(BOOLEAN)
+  progressCurrent Int?
+  progressTarget  Int?
+  deadline        DateTime?
+  status          TaskStatus     @default(ACTIVE)
+  visibility      Visibility     @default(PRIVATE)
+  order           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("tasks")
 }
