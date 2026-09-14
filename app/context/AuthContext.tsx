@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
-const API_URL = "http://192.168.0.152:3000";
+import { API_URL } from "@/constants/api";
 
 type User = {
   id: string;

@@ -6,10 +6,15 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { TopBar } from "@/components/top-bar";
+
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
+import "@/global.css";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -29,7 +34,10 @@ function RootNavigator() {
   return (
     <Stack>
       <Stack.Protected guard={!!token}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(tabs)"
+          options={{ headerShown: true, header: () => <TopBar /> }}
+        />
         <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
@@ -46,11 +54,17 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <GluestackUIProvider mode="dark">
+        <ThemeProvider
+          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+        >
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </GluestackUIProvider>
+    </SafeAreaProvider>
   );
 }
