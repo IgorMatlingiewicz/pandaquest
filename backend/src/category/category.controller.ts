@@ -13,6 +13,7 @@ import { Request as ExpressRequest } from 'express';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReorderDto } from '../common/dto/reorder.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -32,6 +33,11 @@ export class CategoryController {
   @Get()
   findAll(@Request() req: AuthenticatedRequest) {
     return this.categoryService.findAll(req.user.userId);
+  }
+
+  @Patch('reorder')
+  reorder(@Request() req: AuthenticatedRequest, @Body() dto: ReorderDto) {
+    return this.categoryService.reorder(req.user.userId, dto.items);
   }
 
   @Patch(':id')

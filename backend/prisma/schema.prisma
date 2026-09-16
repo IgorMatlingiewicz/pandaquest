@@ -51,18 +51,31 @@ enum Visibility {
   PRIVATE
 }
 
+enum CategoryColor {
+  RED
+  ORANGE
+  AMBER
+  GREEN
+  TEAL
+  BLUE
+  PURPLE
+  PINK
+  GRAY
+}
+
 model Category {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
   name        String
   description String?
   icon        String?
-  isTemplate  Boolean  @default(false)
-  order       Int      @default(0)
+  color       CategoryColor @default(GRAY)
+  isTemplate  Boolean       @default(false)
+  order       Int           @default(0)
   tasks       Task[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@map("categories")
 }

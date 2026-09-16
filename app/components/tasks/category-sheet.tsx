@@ -11,13 +11,21 @@ import { Button, ButtonText } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
-import { Text } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Pressable, Text } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import {
+  CATEGORY_COLORS,
+  DEFAULT_CATEGORY_COLOR,
+  type CategoryColor,
+} from "@/constants/category-colors";
 
 const DEFAULT_ICON = "✅";
 
 export type CategoryFormValues = {
   name: string;
   icon: string;
+  color: CategoryColor;
 };
 
 type Props = {
@@ -35,19 +43,27 @@ export function CategorySheet({
 }: Props) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
+  const [color, setColor] = useState<CategoryColor>(DEFAULT_CATEGORY_COLOR);
   const [saving, setSaving] = useState(false);
+  const colorScheme = useColorScheme();
+  const selectionRingColor = colorScheme === "dark" ? "#ffffff" : "#000000";
 
   useEffect(() => {
     if (isOpen) {
       setName(initialValues?.name ?? "");
       setIcon(initialValues?.icon ?? "");
+      setColor(initialValues?.color ?? DEFAULT_CATEGORY_COLOR);
     }
   }, [isOpen, initialValues]);
 
   async function handleSave() {
     if (!name.trim()) return;
     setSaving(true);
-    await onSave({ name: name.trim(), icon: icon.trim() || DEFAULT_ICON });
+    await onSave({
+      name: name.trim(),
+      icon: icon.trim() || DEFAULT_ICON,
+      color,
+    });
     setSaving(false);
     onClose();
   }
@@ -66,7 +82,7 @@ export function CategorySheet({
           </Heading>
 
           <VStack space="xs">
-            <Text className="text-typography-500">Nazwa</Text>
+            <Text className="text-muted-foreground">Nazwa</Text>
             <Input>
               <InputField
                 value={name}
@@ -77,7 +93,7 @@ export function CategorySheet({
           </VStack>
 
           <VStack space="xs">
-            <Text className="text-typography-500">Ikona (opcjonalnie)</Text>
+            <Text className="text-muted-foreground">Ikona (opcjonalnie)</Text>
             <Input>
               <InputField
                 value={icon}
@@ -85,6 +101,39 @@ export function CategorySheet({
                 placeholder={`np. 💪  (domyślnie ${DEFAULT_ICON})`}
               />
             </Input>
+          </VStack>
+
+          <VStack space="xs">
+            <Text className="text-muted-foreground">Kolor</Text>
+            <HStack space="sm" className="flex-wrap">
+              {CATEGORY_COLORS.map((swatch) => {
+                const selected = color === swatch.id;
+                return (
+                  <Pressable
+                    key={swatch.id}
+                    onPress={() => setColor(swatch.id)}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: swatch.bg,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: selected ? 2 : 0,
+                      borderColor: selectionRingColor,
+                    }}
+                  >
+                    {selected && (
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={16}
+                        color={swatch.fg}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </HStack>
           </VStack>
 
           <HStack space="sm" className="mt-2">

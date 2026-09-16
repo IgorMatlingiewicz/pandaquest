@@ -1,14 +1,12 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-} from "react-native";
+import { ActivityIndicator } from "react-native";
 import { Link } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { VStack } from "@/components/ui/vstack";
+import { Heading } from "@/components/ui/heading";
+import { Text } from "@/components/ui/text";
+import { Input, InputField } from "@/components/ui/input";
+import { Button, ButtonText } from "@/components/ui/button";
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -31,82 +29,56 @@ export default function RegisterScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Rejestracja</Text>
+    <VStack className="flex-1 justify-center bg-background p-6" space="sm">
+      <Heading size="xl" className="mb-4 text-center">
+        Rejestracja
+      </Heading>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#888"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Nazwa użytkownika"
-        placeholderTextColor="#888"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Hasło"
-        placeholderTextColor="#888"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <Input className="mb-2">
+        <InputField
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+      </Input>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Input className="mb-2">
+        <InputField
+          placeholder="Nazwa użytkownika"
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
+        />
+      </Input>
 
-      <Pressable
-        style={styles.button}
-        onPress={handleRegister}
-        disabled={loading}
-      >
+      <Input className="mb-2">
+        <InputField
+          placeholder="Hasło"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+      </Input>
+
+      {error ? (
+        <Text className="mb-2 text-center text-destructive">{error}</Text>
+      ) : null}
+
+      <Button onPress={handleRegister} isDisabled={loading} className="mt-2">
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.buttonText}>Zarejestruj się</Text>
+          <ButtonText>Zarejestruj się</ButtonText>
         )}
-      </Pressable>
+      </Button>
 
-      <Link href="/login" style={styles.link}>
-        Masz już konto? Zaloguj się
+      <Link href="/login" className="mt-4">
+        <Text className="text-center text-blue-500">
+          Masz już konto? Zaloguj się
+        </Text>
       </Link>
-    </View>
+    </VStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24 },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 24,
-    color: "white",
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#444",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    color: "white",
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#4A90D9",
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonText: { color: "white", fontSize: 16, fontWeight: "600" },
-  error: { color: "#ff6b6b", marginBottom: 12, textAlign: "center" },
-  link: { marginTop: 16, textAlign: "center", color: "#4A90D9" },
-});

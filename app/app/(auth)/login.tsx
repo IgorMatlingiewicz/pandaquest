@@ -1,14 +1,12 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-} from "react-native";
+import { ActivityIndicator } from "react-native";
 import { Link } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { VStack } from "@/components/ui/vstack";
+import { Heading } from "@/components/ui/heading";
+import { Text } from "@/components/ui/text";
+import { Input, InputField } from "@/components/ui/input";
+import { Button, ButtonText } from "@/components/ui/button";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -30,70 +28,47 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Logowanie</Text>
+    <VStack className="flex-1 justify-center bg-background p-6" space="sm">
+      <Heading size="xl" className="mb-4 text-center">
+        Logowanie
+      </Heading>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#888"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Hasło"
-        placeholderTextColor="#888"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <Input className="mb-2">
+        <InputField
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+      </Input>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Input className="mb-2">
+        <InputField
+          placeholder="Hasło"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+      </Input>
 
-      <Pressable style={styles.button} onPress={handleLogin} disabled={loading}>
+      {error ? (
+        <Text className="mb-2 text-center text-destructive">{error}</Text>
+      ) : null}
+
+      <Button onPress={handleLogin} isDisabled={loading} className="mt-2">
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.buttonText}>Zaloguj się</Text>
+          <ButtonText>Zaloguj się</ButtonText>
         )}
-      </Pressable>
+      </Button>
 
-      <Link href="/register" style={styles.link}>
-        Nie masz konta? Zarejestruj się
+      <Link href="/register" className="mt-4">
+        <Text className="text-center text-blue-500">
+          Nie masz konta? Zarejestruj się
+        </Text>
       </Link>
-    </View>
+    </VStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24 },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 24,
-    color: "white",
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#444",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    color: "white",
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#4A90D9",
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonText: { color: "white", fontSize: 16, fontWeight: "600" },
-  error: { color: "#ff6b6b", marginBottom: 12, textAlign: "center" },
-  link: { marginTop: 16, textAlign: "center", color: "#4A90D9" },
-});

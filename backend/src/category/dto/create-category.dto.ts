@@ -1,4 +1,5 @@
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsEnum, MinLength } from 'class-validator';
+import { CategoryColor } from '../../generated/prisma/client';
 
 export class CreateCategoryDto {
   @IsString()
@@ -12,4 +13,8 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   icon?: string;
+
+  @IsOptional()
+  @IsEnum(CategoryColor)
+  color?: CategoryColor;
 }

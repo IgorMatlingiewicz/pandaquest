@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { ScrollView, RefreshControl, Pressable } from "react-native";
+import { RefreshControl, Pressable, View } from "react-native";
+import type { ListRenderItemInfo } from "react-native";
+import { DraxList } from "react-native-drax";
 import { useAuth } from "@/context/AuthContext";
 import { CategoryCard } from "@/components/tasks/category-card";
 import {
@@ -11,12 +13,15 @@ import { type Task } from "@/components/tasks/task-row";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { API_URL } from "@/constants/api";
+import { type CategoryColor } from "@/constants/category-colors";
 import { alertMessage, confirmAsync } from "@/lib/confirm";
+import { reorderItems } from "@/lib/reorder";
 
 type Category = {
   id: string;
   name: string;
   icon: string | null;
+  color: CategoryColor;
 };
 
 export default function HomeScreen() {
@@ -139,6 +144,44 @@ export default function HomeScreen() {
     await loadData();
   }
 
+  async function handleUpdateProgress(task: Task, progressCurrent: number) {
+    await fetch(`${API_URL}/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ progressCurrent }),
+    });
+
+    await loadData();
+  }
+
+  async function handleReorderCategories(newOrder: Category[]) {
+    setCategories(newOrder);
+    if (!token) return;
+
+    await reorderItems(
+      "categories",
+      token,
+      newOrder.map((category, index) => ({ id: category.id, order: index })),
+    );
+  }
+
+  async function handleReorderTasks(categoryId: string, newOrder: Task[]) {
+    setTasks((prev) => [
+      ...prev.filter((t) => t.categoryId !== categoryId),
+      ...newOrder,
+    ]);
+    if (!token) return;
+
+    await reorderItems(
+      "tasks",
+      token,
+      newOrder.map((task, index) => ({ id: task.id, order: index })),
+    );
+  }
+
   function openNewTaskSheet(categoryId: string) {
     setEditingTask(undefined);
     setTaskCategoryId(categoryId);
@@ -164,13 +207,21 @@ export default function HomeScreen() {
         body: JSON.stringify({
           title: values.title,
           categoryId: values.categoryId,
+          ...(values.progressCurrent !== undefined
+            ? { progressCurrent: values.progressCurrent }
+            : {}),
         }),
       });
     } else {
       await fetch(`${API_URL}/tasks`, {
         method: "POST",
         headers,
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          title: values.title,
+          categoryId: values.categoryId,
+          completionMode: values.completionMode,
+          progressTarget: values.progressTarget,
+        }),
       });
     }
 
@@ -186,46 +237,64 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerClassName="items-center p-4"
-      refreshControl={
-        <RefreshControl refreshing={false} onRefresh={loadData} />
-      }
-    >
-      <VStack className="w-full max-w-2xl">
-        <Text size="lg" className="mb-4">
-          Cześć, {user?.username}!
-        </Text>
-
-        {categories.map((category) => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            tasks={tasks.filter((t) => t.categoryId === category.id)}
-            onToggleTask={handleToggleTask}
-            onEditCategory={openEditCategorySheet}
-            onDeleteCategory={handleDeleteCategory}
-            onEditTask={openEditTaskSheet}
-            onDeleteTask={handleDeleteTask}
-            onAddTask={() => openNewTaskSheet(category.id)}
-          />
-        ))}
-
-        <Pressable
-          onPress={openNewCategorySheet}
-          className="items-center py-3 border border-dashed border-border rounded-xl mb-8"
-        >
-          <Text className="text-muted-foreground">+ Nowa kategoria</Text>
-        </Pressable>
-      </VStack>
+    <View className="flex-1 bg-background">
+      <DraxList
+        data={categories}
+        keyExtractor={(category) => category.id}
+        containerStyle={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16 }}
+        itemDraxViewProps={{ dragHandle: true }}
+        lockToMainAxis
+        longPressDelay={100}
+        refreshControl={
+          <RefreshControl refreshing={false} onRefresh={loadData} />
+        }
+        onReorder={({ data }) => handleReorderCategories(data)}
+        ListHeaderComponent={
+          <VStack className="w-full max-w-2xl mx-auto">
+            <Text size="lg" className="mb-4">
+              Cześć, {user?.username}!
+            </Text>
+          </VStack>
+        }
+        ListFooterComponent={
+          <VStack className="w-full max-w-2xl mx-auto">
+            <Pressable
+              onPress={openNewCategorySheet}
+              className="items-center py-3 border border-dashed border-border rounded-xl mb-8"
+            >
+              <Text className="text-muted-foreground">+ Nowa kategoria</Text>
+            </Pressable>
+          </VStack>
+        }
+        renderItem={({ item }: ListRenderItemInfo<Category>) => (
+          <View className="w-full max-w-2xl mx-auto">
+            <CategoryCard
+              category={item}
+              tasks={tasks.filter((t) => t.categoryId === item.id)}
+              onToggleTask={handleToggleTask}
+              onEditCategory={openEditCategorySheet}
+              onDeleteCategory={handleDeleteCategory}
+              onEditTask={openEditTaskSheet}
+              onDeleteTask={handleDeleteTask}
+              onUpdateTaskProgress={handleUpdateProgress}
+              onReorderTasks={handleReorderTasks}
+              onAddTask={() => openNewTaskSheet(item.id)}
+            />
+          </View>
+        )}
+      />
 
       <CategorySheet
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
         initialValues={
           editingCategory
-            ? { name: editingCategory.name, icon: editingCategory.icon ?? "" }
+            ? {
+                name: editingCategory.name,
+                icon: editingCategory.icon ?? "",
+                color: editingCategory.color,
+              }
             : undefined
         }
         onSave={handleSaveCategory}
@@ -235,15 +304,21 @@ export default function HomeScreen() {
         isOpen={taskSheetOpen}
         onClose={() => setTaskSheetOpen(false)}
         categories={categories}
+        isEditing={!!editingTask}
         initialValues={
           editingTask
-            ? { title: editingTask.title, categoryId: editingTask.categoryId }
+            ? {
+                title: editingTask.title,
+                categoryId: editingTask.categoryId,
+                completionMode: editingTask.completionMode,
+                progressCurrent: editingTask.progressCurrent ?? undefined,
+              }
             : taskCategoryId
               ? { title: "", categoryId: taskCategoryId }
               : undefined
         }
         onSave={handleSaveTask}
       />
-    </ScrollView>
+    </View>
   );
 }

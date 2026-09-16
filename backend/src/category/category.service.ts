@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReorderItemDto } from '../common/dto/reorder.dto';
 
 @Injectable()
 export class CategoryService {
@@ -48,6 +49,22 @@ export class CategoryService {
     return this.prisma.category.update({
       where: { id },
       data: dto,
+    });
+  }
+
+  async reorder(userId: string, items: ReorderItemDto[]) {
+    return this.prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const category = await tx.category.findFirst({
+          where: { id: item.id, userId },
+        });
+        if (!category) continue;
+
+        await tx.category.update({
+          where: { id: item.id },
+          data: { order: item.order },
+        });
+      }
     });
   }
 

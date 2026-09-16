@@ -1,15 +1,20 @@
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { DraxProvider } from "react-native-drax";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import {
+  ColorSchemeProvider,
+  useAppColorScheme,
+} from "@/context/ColorSchemeContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { TopBar } from "@/components/top-bar";
 
@@ -50,21 +55,33 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function AppShell() {
+  const { colorScheme } = useAppColorScheme();
 
   return (
-    <SafeAreaProvider>
-      <GluestackUIProvider mode="dark">
-        <ThemeProvider
-          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
-          <AuthProvider>
-            <RootNavigator />
-          </AuthProvider>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </GluestackUIProvider>
-    </SafeAreaProvider>
+    <GluestackUIProvider mode={colorScheme}>
+      <NavigationThemeProvider
+        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+      >
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+        <StatusBar style="auto" />
+      </NavigationThemeProvider>
+    </GluestackUIProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <DraxProvider>
+        <SafeAreaProvider>
+          <ColorSchemeProvider>
+            <AppShell />
+          </ColorSchemeProvider>
+        </SafeAreaProvider>
+      </DraxProvider>
+    </GestureHandlerRootView>
   );
 }

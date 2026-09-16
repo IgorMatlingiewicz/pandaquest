@@ -14,6 +14,7 @@ import { Request as ExpressRequest } from 'express';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ReorderDto } from '../common/dto/reorder.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -41,6 +42,11 @@ export class TaskController {
   @Get(':id')
   findOne(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.taskService.findOne(req.user.userId, id);
+  }
+
+  @Patch('reorder')
+  reorder(@Request() req: AuthenticatedRequest, @Body() dto: ReorderDto) {
+    return this.taskService.reorder(req.user.userId, dto.items);
   }
 
   @Patch(':id')

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ReorderItemDto } from '../common/dto/reorder.dto';
 import { TaskStatus } from '../generated/prisma/client';
 
 @Injectable()
@@ -54,6 +55,22 @@ export class TaskService {
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
     return this.prisma.task.delete({ where: { id } });
+  }
+
+  async reorder(userId: string, items: ReorderItemDto[]) {
+    return this.prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const task = await tx.task.findFirst({
+          where: { id: item.id, userId },
+        });
+        if (!task) continue;
+
+        await tx.task.update({
+          where: { id: item.id },
+          data: { order: item.order },
+        });
+      }
+    });
   }
 
   async update(userId: string, id: string, dto: UpdateTaskDto) {
