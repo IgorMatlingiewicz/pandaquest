@@ -12,6 +12,7 @@ import { Heading } from "@/components/ui/heading";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Pressable, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 
 type Category = {
   id: string;
@@ -53,6 +54,7 @@ export function TaskSheet({
   const [progressTarget, setProgressTarget] = useState("");
   const [progressCurrent, setProgressCurrent] = useState("");
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isOpen) {
@@ -103,22 +105,26 @@ export function TaskSheet({
 
         <VStack space="md" className="w-full mt-2">
           <Heading size="md">
-            {isEditing ? "Edytuj zadanie" : "Nowe zadanie"}
+            {isEditing ? t("tasks.task.editTitle") : t("tasks.task.newTitle")}
           </Heading>
 
           <VStack space="xs">
-            <Text className="text-muted-foreground">Nazwa zadania</Text>
+            <Text className="text-muted-foreground">
+              {t("tasks.task.nameLabel")}
+            </Text>
             <Input>
               <InputField
                 value={title}
                 onChangeText={setTitle}
-                placeholder="np. Podlej kwiaty"
+                placeholder={t("tasks.task.namePlaceholder")}
               />
             </Input>
           </VStack>
 
           <VStack space="xs">
-            <Text className="text-muted-foreground">Kategoria</Text>
+            <Text className="text-muted-foreground">
+              {t("tasks.task.categoryLabel")}
+            </Text>
             <HStack space="sm" className="flex-wrap">
               {categories.map((cat) => (
                 <Pressable
@@ -147,7 +153,9 @@ export function TaskSheet({
 
           {!isEditing && (
             <VStack space="xs">
-              <Text className="text-muted-foreground">Typ zadania</Text>
+              <Text className="text-muted-foreground">
+                {t("tasks.task.typeLabel")}
+              </Text>
               <HStack space="sm">
                 <Pressable
                   onPress={() => setCompletionMode("BOOLEAN")}
@@ -164,7 +172,7 @@ export function TaskSheet({
                         : "text-foreground"
                     }
                   >
-                    Zwykłe zadanie
+                    {t("tasks.task.typeBoolean")}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -182,7 +190,7 @@ export function TaskSheet({
                         : "text-foreground"
                     }
                   >
-                    Zadanie z postępem
+                    {t("tasks.task.typeProgress")}
                   </Text>
                 </Pressable>
               </HStack>
@@ -191,13 +199,15 @@ export function TaskSheet({
 
           {!isEditing && completionMode === "PROGRESS" && (
             <VStack space="xs">
-              <Text className="text-muted-foreground">Cel</Text>
+              <Text className="text-muted-foreground">
+                {t("tasks.task.targetLabel")}
+              </Text>
               <Input>
                 <InputField
                   value={progressTarget}
                   onChangeText={setProgressTarget}
                   keyboardType="numeric"
-                  placeholder="np. 10"
+                  placeholder={t("tasks.task.targetPlaceholder")}
                 />
               </Input>
             </VStack>
@@ -205,13 +215,15 @@ export function TaskSheet({
 
           {isExistingProgressTask && (
             <VStack space="xs">
-              <Text className="text-muted-foreground">Aktualny postęp</Text>
+              <Text className="text-muted-foreground">
+                {t("tasks.task.currentProgressLabel")}
+              </Text>
               <Input>
                 <InputField
                   value={progressCurrent}
                   onChangeText={setProgressCurrent}
                   keyboardType="numeric"
-                  placeholder="np. 3"
+                  placeholder={t("tasks.task.currentProgressPlaceholder")}
                 />
               </Input>
             </VStack>
@@ -219,10 +231,12 @@ export function TaskSheet({
 
           <HStack space="sm" className="mt-2">
             <Button variant="outline" className="flex-1" onPress={onClose}>
-              <ButtonText>Anuluj</ButtonText>
+              <ButtonText>{t("common.cancel")}</ButtonText>
             </Button>
             <Button className="flex-1" onPress={handleSave} isDisabled={saving}>
-              <ButtonText>{saving ? "Zapisywanie..." : "Zapisz"}</ButtonText>
+              <ButtonText>
+                {saving ? t("common.saving") : t("common.save")}
+              </ButtonText>
             </Button>
           </HStack>
         </VStack>

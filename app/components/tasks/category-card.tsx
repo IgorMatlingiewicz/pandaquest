@@ -1,6 +1,7 @@
 import { Pressable, View, type ListRenderItemInfo } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { DraxList, DraxHandle } from "react-native-drax";
+import { useTranslation } from "react-i18next";
 import { grabCursorStyle } from "@/lib/web-styles";
 import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
@@ -45,6 +46,7 @@ export function CategoryCard({
   onReorderTasks,
   onAddTask,
 }: Props) {
+  const { t } = useTranslation();
   const swatch = getCategoryColor(category.color);
 
   return (
@@ -112,7 +114,7 @@ export function CategoryCard({
 
       <Pressable onPress={onAddTask} className="mt-2 py-1">
         <Text size="sm" className="text-muted-foreground">
-          + Dodaj zadanie
+          {t("tasks.addTask")}
         </Text>
       </Pressable>
     </Card>

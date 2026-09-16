@@ -13,6 +13,7 @@ import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Pressable, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
   CATEGORY_COLORS,
@@ -45,6 +46,7 @@ export function CategorySheet({
   const [icon, setIcon] = useState("");
   const [color, setColor] = useState<CategoryColor>(DEFAULT_CATEGORY_COLOR);
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const selectionRingColor = colorScheme === "dark" ? "#ffffff" : "#000000";
 
@@ -78,33 +80,43 @@ export function CategorySheet({
 
         <VStack space="md" className="w-full mt-2">
           <Heading size="md">
-            {initialValues ? "Edytuj kategorię" : "Nowa kategoria"}
+            {initialValues
+              ? t("tasks.category.editTitle")
+              : t("tasks.category.newTitle")}
           </Heading>
 
           <VStack space="xs">
-            <Text className="text-muted-foreground">Nazwa</Text>
+            <Text className="text-muted-foreground">
+              {t("tasks.category.nameLabel")}
+            </Text>
             <Input>
               <InputField
                 value={name}
                 onChangeText={setName}
-                placeholder="np. Treningi"
+                placeholder={t("tasks.category.namePlaceholder")}
               />
             </Input>
           </VStack>
 
           <VStack space="xs">
-            <Text className="text-muted-foreground">Ikona (opcjonalnie)</Text>
+            <Text className="text-muted-foreground">
+              {t("tasks.category.iconLabel")}
+            </Text>
             <Input>
               <InputField
                 value={icon}
                 onChangeText={setIcon}
-                placeholder={`np. 💪  (domyślnie ${DEFAULT_ICON})`}
+                placeholder={t("tasks.category.iconPlaceholder", {
+                  defaultIcon: DEFAULT_ICON,
+                })}
               />
             </Input>
           </VStack>
 
           <VStack space="xs">
-            <Text className="text-muted-foreground">Kolor</Text>
+            <Text className="text-muted-foreground">
+              {t("tasks.category.colorLabel")}
+            </Text>
             <HStack space="sm" className="flex-wrap">
               {CATEGORY_COLORS.map((swatch) => {
                 const selected = color === swatch.id;
@@ -138,10 +150,12 @@ export function CategorySheet({
 
           <HStack space="sm" className="mt-2">
             <Button variant="outline" className="flex-1" onPress={onClose}>
-              <ButtonText>Anuluj</ButtonText>
+              <ButtonText>{t("common.cancel")}</ButtonText>
             </Button>
             <Button className="flex-1" onPress={handleSave} isDisabled={saving}>
-              <ButtonText>{saving ? "Zapisywanie..." : "Zapisz"}</ButtonText>
+              <ButtonText>
+                {saving ? t("common.saving") : t("common.save")}
+              </ButtonText>
             </Button>
           </HStack>
         </VStack>

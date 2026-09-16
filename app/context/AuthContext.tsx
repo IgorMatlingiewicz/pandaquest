@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
 import { API_URL } from "@/constants/api";
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function loadStoredToken() {
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok) {
-      throw new Error("Nieprawidłowy email lub hasło");
+      throw new Error(t("auth.login.invalidCredentials"));
     }
     const data = await response.json();
     await setToken(data.accessToken);
@@ -80,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.message || "Rejestracja nie powiodła się");
+      throw new Error(err.message || t("auth.register.failed"));
     }
     await login(email, password);
   }

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RefreshControl, Pressable, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
 import { DraxList } from "react-native-drax";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { CategoryCard } from "@/components/tasks/category-card";
 import {
@@ -25,6 +26,7 @@ type Category = {
 };
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { token, user, logout } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -107,8 +109,8 @@ export default function HomeScreen() {
 
   async function handleDeleteCategory(category: Category) {
     const ok = await confirmAsync(
-      "Usunąć kategorię?",
-      `Kategoria "${category.name}" zostanie usunięta.`,
+      t("tasks.deleteCategoryConfirm.title"),
+      t("tasks.deleteCategoryConfirm.message", { name: category.name }),
     );
     if (!ok) return;
 
@@ -120,8 +122,8 @@ export default function HomeScreen() {
     if (!response.ok) {
       const err = await response.json().catch(() => null);
       alertMessage(
-        "Nie udało się usunąć kategorii",
-        err?.message ?? "Spróbuj ponownie.",
+        t("tasks.deleteCategoryError"),
+        err?.message ?? t("common.tryAgain"),
       );
       return;
     }
@@ -131,8 +133,8 @@ export default function HomeScreen() {
 
   async function handleDeleteTask(task: Task) {
     const ok = await confirmAsync(
-      "Usunąć zadanie?",
-      `Zadanie "${task.title}" zostanie usunięte.`,
+      t("tasks.deleteTaskConfirm.title"),
+      t("tasks.deleteTaskConfirm.message", { title: task.title }),
     );
     if (!ok) return;
 
@@ -231,7 +233,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <VStack className="flex-1 items-center justify-center">
-        <Text>Ładowanie...</Text>
+        <Text>{t("common.loading")}</Text>
       </VStack>
     );
   }
@@ -253,7 +255,7 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <VStack className="w-full max-w-2xl mx-auto">
             <Text size="lg" className="mb-4">
-              Cześć, {user?.username}!
+              {t("tasks.greeting", { username: user?.username })}
             </Text>
           </VStack>
         }
@@ -263,7 +265,9 @@ export default function HomeScreen() {
               onPress={openNewCategorySheet}
               className="items-center py-3 border border-dashed border-border rounded-xl mb-8"
             >
-              <Text className="text-muted-foreground">+ Nowa kategoria</Text>
+              <Text className="text-muted-foreground">
+                {t("tasks.addCategory")}
+              </Text>
             </Pressable>
           </VStack>
         }

@@ -12,6 +12,7 @@ import { Heading } from "@/components/ui/heading";
 import { VStack } from "@/components/ui/vstack";
 import { HStack } from "@/components/ui/hstack";
 import { Text } from "react-native";
+import { useTranslation } from "react-i18next";
 import { type Task } from "./task-row";
 
 type Props = {
@@ -24,6 +25,7 @@ type Props = {
 export function ProgressUpdateSheet({ isOpen, onClose, task, onSave }: Props) {
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isOpen) {
@@ -55,14 +57,16 @@ export function ProgressUpdateSheet({ isOpen, onClose, task, onSave }: Props) {
 
           <VStack space="xs">
             <Text className="text-muted-foreground">
-              Postęp (cel: {task.progressTarget ?? "-"})
+              {t("tasks.task.progressWithTarget", {
+                target: task.progressTarget ?? "-",
+              })}
             </Text>
             <Input>
               <InputField
                 value={value}
                 onChangeText={setValue}
                 keyboardType="numeric"
-                placeholder="np. 10"
+                placeholder={t("tasks.task.targetPlaceholder")}
                 autoFocus
               />
             </Input>
@@ -70,10 +74,12 @@ export function ProgressUpdateSheet({ isOpen, onClose, task, onSave }: Props) {
 
           <HStack space="sm" className="mt-2">
             <Button variant="outline" className="flex-1" onPress={onClose}>
-              <ButtonText>Anuluj</ButtonText>
+              <ButtonText>{t("common.cancel")}</ButtonText>
             </Button>
             <Button className="flex-1" onPress={handleSave} isDisabled={saving}>
-              <ButtonText>{saving ? "Zapisywanie..." : "Zapisz"}</ButtonText>
+              <ButtonText>
+                {saving ? t("common.saving") : t("common.save")}
+              </ButtonText>
             </Button>
           </HStack>
         </VStack>
