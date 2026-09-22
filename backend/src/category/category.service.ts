@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -69,7 +70,11 @@ export class CategoryService {
   }
 
   async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
+    const category = await this.findOne(userId, id);
+
+    if (!category.isDeletable) {
+      throw new ForbiddenException('Tej kategorii nie można usunąć');
+    }
 
     const taskCount = await this.prisma.task.count({
       where: { categoryId: id },

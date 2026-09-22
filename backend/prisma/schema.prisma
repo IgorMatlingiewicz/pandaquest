@@ -71,6 +71,8 @@ model Category {
   description String?
   icon        String?
   color       CategoryColor @default(GRAY)
+  cycleType   TaskType?
+  isDeletable Boolean       @default(true)
   isTemplate  Boolean       @default(false)
   order       Int           @default(0)
   tasks       Task[]

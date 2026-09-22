@@ -19,6 +19,7 @@ type Category = {
   name: string;
   icon: string | null;
   color: CategoryColor;
+  isDeletable: boolean;
 };
 
 type Props = {
@@ -83,13 +84,15 @@ export function CategoryCard({
               color="#999"
             />
           </Pressable>
-          <Pressable onPress={() => onDeleteCategory(category)}>
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={18}
-              color="#999"
-            />
-          </Pressable>
+          {category.isDeletable && (
+            <Pressable onPress={() => onDeleteCategory(category)}>
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={18}
+                color="#999"
+              />
+            </Pressable>
+          )}
         </HStack>
       </HStack>
 

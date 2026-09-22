@@ -10,6 +10,13 @@ export class TaskService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateTaskDto) {
+    const category = await this.prisma.category.findFirst({
+      where: { id: dto.categoryId, userId },
+    });
+    if (!category) {
+      throw new NotFoundException('Kategoria nie znaleziona');
+    }
+
     const count = await this.prisma.task.count({
       where: {
         userId,
@@ -22,6 +29,9 @@ export class TaskService {
       data: {
         ...dto,
         userId,
+        // A cycle category (Daily/Weekly/Life) always dictates the task's
+        // type, regardless of what the client sent.
+        type: category.cycleType ?? dto.type,
         order: count,
       },
     });

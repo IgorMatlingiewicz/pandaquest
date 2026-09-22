@@ -23,6 +23,7 @@ type Category = {
   name: string;
   icon: string | null;
   color: CategoryColor;
+  isDeletable: boolean;
 };
 
 export default function HomeScreen() {
