@@ -20,6 +20,7 @@ model User {
   passwordHash String
   xpTotal      Int      @default(0)
   level        Int      @default(1)
+  timezone     String   @default("Europe/Warsaw")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -100,8 +101,28 @@ model Task {
   status          TaskStatus     @default(ACTIVE)
   visibility      Visibility     @default(PRIVATE)
   order           Int            @default(0)
+  completions     TaskCompletion[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   @@map("tasks")
+}
+
+// Per-period state of a DAILY/WEEKLY task. The Task row is the template;
+// a missing row for the current period means "not started yet".
+model TaskCompletion {
+  id               String    @id @default(uuid())
+  taskId           String
+  task             Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  periodKey        String
+  progressCurrent  Int?
+  // Set while the task is completed in this period, cleared on un-complete.
+  completedAt      DateTime?
+  // First completion in this period. Set once, never cleared.
+  firstCompletedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([taskId, periodKey])
+  @@map("task_completions")
 }

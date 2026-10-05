@@ -25,6 +25,16 @@ type AuthContextType = {
   logout: () => Promise<void>;
 };
 
+// IANA name of the device timezone; the backend uses it to decide when
+// daily/weekly tasks reset.
+function getDeviceTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -63,7 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        timezone: getDeviceTimezone(),
+      }),
     });
     if (!response.ok) {
       throw new Error(t("auth.login.invalidCredentials"));
@@ -78,7 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, username, password }),
+      body: JSON.stringify({
+        email,
+        username,
+        password,
+        timezone: getDeviceTimezone(),
+      }),
     });
     if (!response.ok) {
       const err = await response.json();

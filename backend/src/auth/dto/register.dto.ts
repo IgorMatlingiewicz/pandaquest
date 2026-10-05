@@ -1,4 +1,10 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsTimeZone,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -11,4 +17,10 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   password!: string;
+
+  // IANA name, e.g. "Europe/Warsaw".
+  @IsOptional()
+  @IsString()
+  @IsTimeZone()
+  timezone?: string;
 }

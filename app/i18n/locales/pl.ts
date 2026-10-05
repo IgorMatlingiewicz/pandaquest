@@ -38,6 +38,10 @@ export default {
       message: 'Zadanie "{{title}}" zostanie usunięte.',
     },
     deleteCategoryError: "Nie udało się usunąć kategorii",
+    resetIn: {
+      daily: "{{hours}} godz. {{minutes}} min",
+      weekly: "{{days}} d {{hours}} godz. {{minutes}} min",
+    },
     category: {
       newTitle: "Nowa kategoria",
       editTitle: "Edytuj kategorię",

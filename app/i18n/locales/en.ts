@@ -40,6 +40,10 @@ const en: typeof pl = {
       message: 'The task "{{title}}" will be deleted.',
     },
     deleteCategoryError: "Couldn't delete the category",
+    resetIn: {
+      daily: "{{hours}}h {{minutes}}m",
+      weekly: "{{days}}d {{hours}}h {{minutes}}m",
+    },
     category: {
       newTitle: "New category",
       editTitle: "Edit category",

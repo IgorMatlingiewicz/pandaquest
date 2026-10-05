@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ReorderItemDto } from '../common/dto/reorder.dto';
+import { getPeriodEnd } from '../common/period';
 
 @Injectable()
 export class CategoryService {
@@ -26,10 +27,27 @@ export class CategoryService {
   }
 
   async findAll(userId: string) {
-    return this.prisma.category.findMany({
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Użytkownik nie znaleziony');
+    }
+
+    const categories = await this.prisma.category.findMany({
       where: { userId },
       orderBy: { order: 'asc' },
     });
+
+    // When the category's tasks reset next (null for non-cyclic categories).
+    const now = new Date();
+    return categories.map((category) => ({
+      ...category,
+      periodEndsAt: category.cycleType
+        ? getPeriodEnd(category.cycleType, now, user.timezone)
+        : null,
+    }));
   }
 
   async findOne(userId: string, id: string) {

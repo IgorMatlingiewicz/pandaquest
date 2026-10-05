@@ -13,6 +13,7 @@ import {
 } from "@/constants/category-colors";
 import { type Task } from "./task-row";
 import { TaskWithSubtasks } from "./task-with-subtasks";
+import { ResetCountdown } from "./reset-countdown";
 
 type Category = {
   id: string;
@@ -20,6 +21,8 @@ type Category = {
   icon: string | null;
   color: CategoryColor;
   isDeletable: boolean;
+  cycleType: "DAILY" | "WEEKLY" | "LIFE" | "SIDE_QUEST" | null;
+  periodEndsAt: string | null;
 };
 
 type Props = {
@@ -33,6 +36,7 @@ type Props = {
   onUpdateTaskProgress: (task: Task, progressCurrent: number) => Promise<void>;
   onReorderTasks: (categoryId: string, tasks: Task[]) => void;
   onAddTask: () => void;
+  onPeriodEnd: () => void;
 };
 
 export function CategoryCard({
@@ -46,6 +50,7 @@ export function CategoryCard({
   onUpdateTaskProgress,
   onReorderTasks,
   onAddTask,
+  onPeriodEnd,
 }: Props) {
   const { t } = useTranslation();
   const swatch = getCategoryColor(category.color);
@@ -75,6 +80,15 @@ export function CategoryCard({
               {category.name}
             </Heading>
           </View>
+          {(category.cycleType === "DAILY" ||
+            category.cycleType === "WEEKLY") &&
+            category.periodEndsAt && (
+              <ResetCountdown
+                cycleType={category.cycleType}
+                endsAt={category.periodEndsAt}
+                onExpire={onPeriodEnd}
+              />
+            )}
         </HStack>
         <HStack space="sm">
           <Pressable onPress={() => onEditCategory(category)}>

@@ -24,6 +24,8 @@ type Category = {
   icon: string | null;
   color: CategoryColor;
   isDeletable: boolean;
+  cycleType: "DAILY" | "WEEKLY" | "LIFE" | "SIDE_QUEST" | null;
+  periodEndsAt: string | null;
 };
 
 export default function HomeScreen() {
@@ -285,6 +287,7 @@ export default function HomeScreen() {
               onUpdateTaskProgress={handleUpdateProgress}
               onReorderTasks={handleReorderTasks}
               onAddTask={() => openNewTaskSheet(item.id)}
+              onPeriodEnd={loadData}
             />
           </View>
         )}

@@ -1,4 +1,4 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsTimeZone } from 'class-validator';
 
 export class LoginDto {
   @IsEmail()
@@ -6,4 +6,10 @@ export class LoginDto {
 
   @IsString()
   password!: string;
+
+  // IANA name, e.g. "Europe/Warsaw".
+  @IsOptional()
+  @IsString()
+  @IsTimeZone()
+  timezone?: string;
 }

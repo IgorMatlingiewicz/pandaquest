@@ -3,7 +3,24 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ReorderItemDto } from '../common/dto/reorder.dto';
-import { TaskStatus } from '../generated/prisma/client';
+import {
+  Prisma,
+  TaskCompletion,
+  TaskStatus,
+  TaskType,
+} from '../generated/prisma/client';
+import { getPeriodKey } from '../common/period';
+
+// Current period key per cyclic task type; other types have no entry.
+type PeriodKeys = Partial<Record<TaskType, string>>;
+
+type TaskWithCompletions = {
+  type: TaskType;
+  completionMode: string;
+  status: TaskStatus;
+  progressCurrent: number | null;
+  completions: TaskCompletion[];
+};
 
 @Injectable()
 export class TaskService {
@@ -38,28 +55,92 @@ export class TaskService {
   }
 
   async findAll(userId: string, categoryId?: string) {
-    return this.prisma.task.findMany({
+    const keys = await this.getPeriodKeys(userId);
+    const completions = this.currentCompletions(keys);
+
+    const tasks = await this.prisma.task.findMany({
       where: {
         userId,
         parentTaskId: null,
         ...(categoryId ? { categoryId } : {}),
       },
-      include: { subtasks: { orderBy: { order: 'asc' } } },
+      include: {
+        completions,
+        subtasks: { include: { completions }, orderBy: { order: 'asc' } },
+      },
       orderBy: { order: 'asc' },
     });
+
+    return tasks.map((task) => ({
+      ...this.withDerivedState(task, keys),
+      subtasks: task.subtasks.map((s) => this.withDerivedState(s, keys)),
+    }));
   }
 
   async findOne(userId: string, id: string) {
+    const keys = await this.getPeriodKeys(userId);
+    return this.findOneForPeriod(userId, id, keys);
+  }
+
+  private async findOneForPeriod(userId: string, id: string, keys: PeriodKeys) {
+    const completions = this.currentCompletions(keys);
+
     const task = await this.prisma.task.findFirst({
       where: { id, userId },
-      include: { subtasks: true },
+      include: { completions, subtasks: { include: { completions } } },
     });
 
     if (!task) {
       throw new NotFoundException('Zadanie nie znalezione');
     }
 
-    return task;
+    return {
+      ...this.withDerivedState(task, keys),
+      subtasks: task.subtasks.map((s) => this.withDerivedState(s, keys)),
+    };
+  }
+
+  private async getPeriodKeys(userId: string): Promise<PeriodKeys> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Użytkownik nie znaleziony');
+    }
+
+    const now = new Date();
+    const keys: PeriodKeys = {};
+    for (const type of Object.values(TaskType)) {
+      const key = getPeriodKey(type, now, user.timezone);
+      if (key) keys[type] = key;
+    }
+    return keys;
+  }
+
+  private currentCompletions(keys: PeriodKeys) {
+    return { where: { periodKey: { in: Object.values(keys) } } };
+  }
+
+  private withDerivedState<T extends TaskWithCompletions>(
+    task: T,
+    keys: PeriodKeys,
+  ): Omit<T, 'completions'> {
+    const { completions, ...rest } = task;
+
+    const periodKey = keys[task.type];
+    if (!periodKey) return rest;
+
+    const completion = completions.find((c) => c.periodKey === periodKey);
+    return {
+      ...rest,
+      status: completion?.completedAt
+        ? TaskStatus.COMPLETED
+        : TaskStatus.ACTIVE,
+      progressCurrent:
+        completion?.progressCurrent ??
+        (task.completionMode === 'PROGRESS' ? 0 : null),
+    };
   }
 
   async remove(userId: string, id: string) {
@@ -84,16 +165,30 @@ export class TaskService {
   }
 
   async update(userId: string, id: string, dto: UpdateTaskDto) {
-    const task = await this.findOne(userId, id);
+    const keys = await this.getPeriodKeys(userId);
+    const task = await this.findOneForPeriod(userId, id, keys);
 
-    const data = { ...dto };
-
-    if (
+    const reachedTarget =
       task.completionMode === 'PROGRESS' &&
       dto.progressCurrent !== undefined &&
       task.progressTarget !== null &&
-      dto.progressCurrent >= task.progressTarget
-    ) {
+      dto.progressCurrent >= task.progressTarget;
+
+    const periodKey = keys[task.type];
+    if (periodKey) {
+      return this.updateCyclic(
+        userId,
+        task,
+        periodKey,
+        keys,
+        dto,
+        reachedTarget,
+      );
+    }
+
+    const data = { ...dto };
+
+    if (reachedTarget) {
       data.status = TaskStatus.COMPLETED;
     }
 
@@ -103,33 +198,124 @@ export class TaskService {
     });
 
     if (data.status && task.parentTaskId) {
-      await this.syncParentStatus(userId, task.parentTaskId);
+      await this.syncParentStatus(userId, task.parentTaskId, keys);
     }
 
     return updated;
   }
 
-  private async syncParentStatus(userId: string, parentId: string) {
+  private async updateCyclic(
+    userId: string,
+    task: { id: string; parentTaskId: string | null },
+    periodKey: string,
+    keys: PeriodKeys,
+    dto: UpdateTaskDto,
+    reachedTarget: boolean,
+  ) {
+    const { status, progressCurrent, ...template } = dto;
+
+    const completed = reachedTarget
+      ? true
+      : status === undefined
+        ? undefined
+        : status === TaskStatus.COMPLETED;
+
+    await this.prisma.$transaction(async (tx) => {
+      if (Object.values(template).some((v) => v !== undefined)) {
+        await tx.task.update({ where: { id: task.id }, data: template });
+      }
+      if (completed !== undefined || progressCurrent !== undefined) {
+        await this.saveCompletion(tx, task.id, periodKey, {
+          completed,
+          progressCurrent,
+        });
+      }
+    });
+
+    if (completed !== undefined && task.parentTaskId) {
+      await this.syncParentStatus(userId, task.parentTaskId, keys);
+    }
+
+    // Same shape as the non-cyclic branch: the task itself, no subtasks.
+    const updated = await this.prisma.task.findFirstOrThrow({
+      where: { id: task.id, userId },
+      include: { completions: this.currentCompletions(keys) },
+    });
+    return this.withDerivedState(updated, keys);
+  }
+
+  private async saveCompletion(
+    tx: Prisma.TransactionClient,
+    taskId: string,
+    periodKey: string,
+    change: { completed?: boolean; progressCurrent?: number },
+  ) {
+    const now = new Date();
+    const { completed, progressCurrent } = change;
+
+    await tx.taskCompletion.upsert({
+      where: { taskId_periodKey: { taskId, periodKey } },
+      create: {
+        taskId,
+        periodKey,
+        progressCurrent,
+        completedAt: completed ? now : null,
+        firstCompletedAt: completed ? now : null,
+      },
+      update: {
+        progressCurrent,
+        ...(completed === false ? { completedAt: null } : {}),
+      },
+    });
+
+    if (completed) {
+      await tx.taskCompletion.updateMany({
+        where: { taskId, periodKey, completedAt: null },
+        data: { completedAt: now },
+      });
+      await tx.taskCompletion.updateMany({
+        where: { taskId, periodKey, firstCompletedAt: null },
+        data: { firstCompletedAt: now },
+      });
+    }
+  }
+
+  private async syncParentStatus(
+    userId: string,
+    parentId: string,
+    keys: PeriodKeys,
+  ) {
+    const completions = this.currentCompletions(keys);
+
     const parent = await this.prisma.task.findFirst({
       where: { id: parentId, userId },
+      include: {
+        completions,
+        subtasks: { where: { userId }, include: { completions } },
+      },
     });
     if (!parent) return;
 
-    const siblings = await this.prisma.task.findMany({
-      where: { parentTaskId: parentId },
-    });
-
-    const allCompleted = siblings.every((t) => t.status === 'COMPLETED');
+    const allCompleted = parent.subtasks.every(
+      (t) => this.withDerivedState(t, keys).status === 'COMPLETED',
+    );
     const newStatus = allCompleted ? TaskStatus.COMPLETED : TaskStatus.ACTIVE;
 
-    if (parent.status !== newStatus) {
-      await this.prisma.task.update({
-        where: { id: parentId },
-        data: { status: newStatus },
-      });
+    if (this.withDerivedState(parent, keys).status !== newStatus) {
+      const periodKey = keys[parent.type];
+      if (periodKey) {
+        await this.saveCompletion(this.prisma, parentId, periodKey, {
+          completed: allCompleted,
+        });
+      } else {
+        await this.prisma.task.update({
+          where: { id: parentId },
+          data: { status: newStatus },
+        });
+      }
 
       if (parent.parentTaskId) {
-        await this.syncParentStatus(userId, parent.parentTaskId);
+        await this.syncParentStatus(userId, parent.parentTaskId, keys);
       }
     }
   }

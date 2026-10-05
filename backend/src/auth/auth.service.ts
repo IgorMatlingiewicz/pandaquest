@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Prisma, TaskType, CompletionMode } from '../generated/prisma/client';
+import { getPeriodKey } from '../common/period';
 
 type DefaultTaskSeed = {
   title: string;
@@ -98,10 +99,15 @@ export class AuthService {
           email: dto.email,
           username: dto.username,
           passwordHash,
+          timezone: dto.timezone,
         },
       });
 
-      await this.seedDefaultCategories(tx, createdUser.id);
+      await this.seedDefaultCategories(
+        tx,
+        createdUser.id,
+        createdUser.timezone,
+      );
 
       return createdUser;
     });
@@ -120,7 +126,10 @@ export class AuthService {
   private async seedDefaultCategories(
     tx: Prisma.TransactionClient,
     userId: string,
+    timezone: string,
   ) {
+    const now = new Date();
+
     for (const [categoryIndex, category] of DEFAULT_CATEGORIES.entries()) {
       const createdCategory = await tx.category.create({
         data: {
@@ -133,7 +142,13 @@ export class AuthService {
         },
       });
 
+      // Cyclic tasks keep their progress per period, not on the Task row.
+      const periodKey = getPeriodKey(category.cycleType, now, timezone);
+
       for (const [taskIndex, task] of category.tasks.entries()) {
+        const seedsCompletion =
+          periodKey !== null && task.progressCurrent !== undefined;
+
         await tx.task.create({
           data: {
             userId,
@@ -142,8 +157,17 @@ export class AuthService {
             type: category.cycleType,
             completionMode: task.completionMode,
             progressTarget: task.progressTarget,
-            progressCurrent: task.progressCurrent,
             order: taskIndex,
+            ...(seedsCompletion
+              ? {
+                  completions: {
+                    create: {
+                      periodKey,
+                      progressCurrent: task.progressCurrent,
+                    },
+                  },
+                }
+              : { progressCurrent: task.progressCurrent }),
           },
         });
       }
@@ -163,6 +187,13 @@ export class AuthService {
 
     if (!passwordValid) {
       throw new UnauthorizedException('Nieprawidłowy email lub hasło');
+    }
+
+    if (dto.timezone && dto.timezone !== user.timezone) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { timezone: dto.timezone },
+      });
     }
 
     const token = await this.jwtService.signAsync({
