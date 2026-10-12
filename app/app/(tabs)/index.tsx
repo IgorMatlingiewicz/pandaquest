@@ -15,6 +15,7 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { API_URL } from "@/constants/api";
 import { type CategoryColor } from "@/constants/category-colors";
+import { useXpToast, type XpAward } from "@/hooks/use-xp-toast";
 import { alertMessage, confirmAsync } from "@/lib/confirm";
 import { reorderItems } from "@/lib/reorder";
 
@@ -30,7 +31,8 @@ type Category = {
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const { token, user, logout } = useAuth();
+  const { token, user, refreshUser } = useAuth();
+  const showXpAward = useXpToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,18 +64,30 @@ export default function HomeScreen() {
     loadData();
   }, [loadData]);
 
-  async function handleToggleTask(task: Task) {
-    const newStatus = task.status === "COMPLETED" ? "ACTIVE" : "COMPLETED";
-
-    await fetch(`${API_URL}/tasks/${task.id}`, {
+  // Sends a task change and reacts to what the server decided: a toast when
+  // this change earned XP, then fresh user data for the top bar.
+  async function patchTask(taskId: string, body: Record<string, unknown>) {
+    const response = await fetch(`${API_URL}/tasks/${taskId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(body),
     });
+    if (!response.ok) return;
 
+    const data: { xpAward: XpAward | null } = await response.json();
+    if (data.xpAward) {
+      showXpAward(data.xpAward);
+      await refreshUser();
+    }
+  }
+
+  async function handleToggleTask(task: Task) {
+    const newStatus = task.status === "COMPLETED" ? "ACTIVE" : "COMPLETED";
+
+    await patchTask(task.id, { status: newStatus });
     await loadData();
   }
 
@@ -150,15 +164,7 @@ export default function HomeScreen() {
   }
 
   async function handleUpdateProgress(task: Task, progressCurrent: number) {
-    await fetch(`${API_URL}/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ progressCurrent }),
-    });
-
+    await patchTask(task.id, { progressCurrent });
     await loadData();
   }
 
@@ -200,27 +206,21 @@ export default function HomeScreen() {
   }
 
   async function handleSaveTask(values: TaskFormValues) {
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-
     if (editingTask) {
-      await fetch(`${API_URL}/tasks/${editingTask.id}`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({
-          title: values.title,
-          categoryId: values.categoryId,
-          ...(values.progressCurrent !== undefined
-            ? { progressCurrent: values.progressCurrent }
-            : {}),
-        }),
+      // A task stays in its category, so only the title and progress go out.
+      await patchTask(editingTask.id, {
+        title: values.title,
+        ...(values.progressCurrent !== undefined
+          ? { progressCurrent: values.progressCurrent }
+          : {}),
       });
     } else {
       await fetch(`${API_URL}/tasks`, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           title: values.title,
           categoryId: values.categoryId,

@@ -67,4 +67,12 @@ export default {
       progressWithTarget: "Postęp (cel: {{target}})",
     },
   },
+  xp: {
+    level: "Poziom {{level}}",
+    progress: "{{current}} / {{total}} XP",
+    maxLevel: "Maksymalny poziom",
+    gained: "+{{amount}} XP",
+    gainedWithMultiplier: "+{{amount}} XP (×{{multiplier}})",
+    levelUp: "Awans! Poziom {{level}}",
+  },
 };

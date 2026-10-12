@@ -4,12 +4,21 @@ import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
 import { API_URL } from "@/constants/api";
 
+// Computed by the backend; the app never derives a level from XP itself.
+type LevelProgress = {
+  level: number;
+  xpIntoLevel: number;
+  xpForNextLevel: number | null;
+  isMax: boolean;
+};
+
 type User = {
   id: string;
   email: string;
   username: string;
   xpTotal: number;
   level: number;
+  levelProgress: LevelProgress;
 };
 
 type AuthContextType = {
@@ -23,6 +32,7 @@ type AuthContextType = {
   ) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 // IANA name of the device timezone; the backend uses it to decide when
@@ -67,6 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return false;
     }
+  }
+
+  // Re-reads the profile, e.g. after the server awarded XP.
+  async function refreshUser() {
+    if (token) await fetchMe(token);
   }
 
   async function login(email: string, password: string) {
@@ -114,7 +129,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ token, user, isLoading, register, login, logout }}
+      value={{
+        token,
+        user,
+        isLoading,
+        register,
+        login,
+        logout,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

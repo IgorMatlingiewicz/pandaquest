@@ -121,35 +121,37 @@ export function TaskSheet({
             </Input>
           </VStack>
 
-          <VStack space="xs">
-            <Text className="text-muted-foreground">
-              {t("tasks.task.categoryLabel")}
-            </Text>
-            <HStack space="sm" className="flex-wrap">
-              {categories.map((cat) => (
-                <Pressable
-                  key={cat.id}
-                  onPress={() => setCategoryId(cat.id)}
-                  className={`px-3 py-2 rounded-full border ${
-                    categoryId === cat.id
-                      ? "border-primary bg-primary"
-                      : "border-border bg-transparent"
-                  }`}
-                >
-                  <Text
-                    className={
+          {!isEditing && (
+            <VStack space="xs">
+              <Text className="text-muted-foreground">
+                {t("tasks.task.categoryLabel")}
+              </Text>
+              <HStack space="sm" className="flex-wrap">
+                {categories.map((cat) => (
+                  <Pressable
+                    key={cat.id}
+                    onPress={() => setCategoryId(cat.id)}
+                    className={`px-3 py-2 rounded-full border ${
                       categoryId === cat.id
-                        ? "text-primary-foreground"
-                        : "text-foreground"
-                    }
+                        ? "border-primary bg-primary"
+                        : "border-border bg-transparent"
+                    }`}
                   >
-                    {cat.icon ? `${cat.icon} ` : ""}
-                    {cat.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </HStack>
-          </VStack>
+                    <Text
+                      className={
+                        categoryId === cat.id
+                          ? "text-primary-foreground"
+                          : "text-foreground"
+                      }
+                    >
+                      {cat.icon ? `${cat.icon} ` : ""}
+                      {cat.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </HStack>
+            </VStack>
+          )}
 
           {!isEditing && (
             <VStack space="xs">

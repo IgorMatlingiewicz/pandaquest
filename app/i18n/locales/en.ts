@@ -69,6 +69,14 @@ const en: typeof pl = {
       progressWithTarget: "Progress (target: {{target}})",
     },
   },
+  xp: {
+    level: "Level {{level}}",
+    progress: "{{current}} / {{total}} XP",
+    maxLevel: "Max level",
+    gained: "+{{amount}} XP",
+    gainedWithMultiplier: "+{{amount}} XP (×{{multiplier}})",
+    levelUp: "Level up! Level {{level}}",
+  },
 };
 
 export default en;
