@@ -10,6 +10,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Prisma, TaskType, CompletionMode } from '../generated/prisma/client';
 import { getPeriodKey } from '../common/period';
+import { levelProgress } from '../xp/xp.logic';
 
 type DefaultTaskSeed = {
   title: string;
@@ -217,6 +218,8 @@ export class AuthService {
       username: user.username,
       xpTotal: user.xpTotal,
       level: user.level,
+      // Computed here so that clients never need to know the level curve.
+      levelProgress: levelProgress(user.xpTotal),
     };
   }
 }

@@ -13,10 +13,24 @@ import {
   TaskStatus,
   TaskType,
 } from '../generated/prisma/client';
-import { getPeriodKey } from '../common/period';
+import { getPeriodKey, getPreviousPeriods } from '../common/period';
+import { LIFETIME_PERIOD_KEY, STREAK_RULES } from '../xp/xp.config';
+import { computeStreak, levelForXp, xpForCompletion } from '../xp/xp.logic';
 
 // Current period key per cyclic task type; other types have no entry.
 type PeriodKeys = Partial<Record<TaskType, string>>;
+
+// One clock reading per request, with the user's timezone and the period
+// keys derived from it, so every step agrees on what "today" is.
+type PeriodContext = { now: Date; timezone: string; keys: PeriodKeys };
+
+export type XpAward = {
+  amount: number;
+  baseXp: number;
+  multiplier: number;
+  leveledUp: boolean;
+  level: number;
+};
 
 type TaskWithCompletions = {
   type: TaskType;
@@ -59,7 +73,7 @@ export class TaskService {
   }
 
   async findAll(userId: string, categoryId?: string) {
-    const keys = await this.getPeriodKeys(userId);
+    const { keys } = await this.getPeriodContext(userId);
     const completions = this.currentCompletions(keys);
 
     const tasks = await this.prisma.task.findMany({
@@ -82,7 +96,7 @@ export class TaskService {
   }
 
   async findOne(userId: string, id: string) {
-    const keys = await this.getPeriodKeys(userId);
+    const { keys } = await this.getPeriodContext(userId);
     return this.findOneForPeriod(userId, id, keys);
   }
 
@@ -104,7 +118,7 @@ export class TaskService {
     };
   }
 
-  private async getPeriodKeys(userId: string): Promise<PeriodKeys> {
+  private async getPeriodContext(userId: string): Promise<PeriodContext> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { timezone: true },
@@ -119,7 +133,7 @@ export class TaskService {
       const key = getPeriodKey(type, now, user.timezone);
       if (key) keys[type] = key;
     }
-    return keys;
+    return { now, timezone: user.timezone, keys };
   }
 
   private currentCompletions(keys: PeriodKeys) {
@@ -169,45 +183,60 @@ export class TaskService {
   }
 
   async update(userId: string, id: string, dto: UpdateTaskDto) {
-    const keys = await this.getPeriodKeys(userId);
-    const task = await this.findOneForPeriod(userId, id, keys);
+    const ctx = await this.getPeriodContext(userId);
+    const task = await this.findOneForPeriod(userId, id, ctx.keys);
     this.assertNotMoved(task, dto);
-    const changes = this.editableFields(dto);
+    const { status, progressCurrent, ...template } = this.editableFields(dto);
 
     const reachedTarget =
       task.completionMode === 'PROGRESS' &&
-      changes.progressCurrent !== undefined &&
+      progressCurrent !== undefined &&
       task.progressTarget !== null &&
-      changes.progressCurrent >= task.progressTarget;
+      progressCurrent >= task.progressTarget;
 
-    const periodKey = keys[task.type];
-    if (periodKey) {
-      return this.updateCyclic(
-        userId,
-        task,
-        periodKey,
-        keys,
-        changes,
-        reachedTarget,
-      );
-    }
+    // undefined: this request does not touch the completion state.
+    const completed = reachedTarget
+      ? true
+      : status === undefined
+        ? undefined
+        : status === TaskStatus.COMPLETED;
+    const periodKey = ctx.keys[task.type];
 
-    const data = { ...changes };
+    // Everything a completion causes (state, parent sync, XP) commits or
+    // rolls back together.
+    const xpAward = await this.prisma.$transaction(async (tx) => {
+      if (periodKey) {
+        if (Object.values(template).some((v) => v !== undefined)) {
+          await tx.task.update({ where: { id }, data: template });
+        }
+        if (completed !== undefined || progressCurrent !== undefined) {
+          await this.saveCompletion(tx, id, periodKey, ctx.now, {
+            completed,
+            progressCurrent,
+          });
+        }
+      } else {
+        await tx.task.update({
+          where: { id },
+          data: {
+            ...template,
+            progressCurrent,
+            status: reachedTarget ? TaskStatus.COMPLETED : status,
+          },
+        });
+      }
 
-    if (reachedTarget) {
-      data.status = TaskStatus.COMPLETED;
-    }
-
-    const updated = await this.prisma.task.update({
-      where: { id },
-      data,
+      if (completed === undefined) return null;
+      return this.onStatusChange(tx, userId, task, completed, ctx);
     });
 
-    if (data.status && task.parentTaskId) {
-      await this.syncParentStatus(userId, task.parentTaskId, keys);
-    }
-
-    return updated;
+    // The task itself, no subtasks. xpAward is null unless this request
+    // was the first completion of a top-level task in its period.
+    const updated = await this.prisma.task.findFirstOrThrow({
+      where: { id, userId },
+      include: { completions: this.currentCompletions(ctx.keys) },
+    });
+    return { ...this.withDerivedState(updated, ctx.keys), xpAward };
   }
 
   /** A task keeps the category, and so the type, it was created with. */
@@ -250,53 +279,13 @@ export class TaskService {
     };
   }
 
-  private async updateCyclic(
-    userId: string,
-    task: { id: string; parentTaskId: string | null },
-    periodKey: string,
-    keys: PeriodKeys,
-    changes: ReturnType<TaskService['editableFields']>,
-    reachedTarget: boolean,
-  ) {
-    const { status, progressCurrent, ...template } = changes;
-
-    const completed = reachedTarget
-      ? true
-      : status === undefined
-        ? undefined
-        : status === TaskStatus.COMPLETED;
-
-    await this.prisma.$transaction(async (tx) => {
-      if (Object.values(template).some((v) => v !== undefined)) {
-        await tx.task.update({ where: { id: task.id }, data: template });
-      }
-      if (completed !== undefined || progressCurrent !== undefined) {
-        await this.saveCompletion(tx, task.id, periodKey, {
-          completed,
-          progressCurrent,
-        });
-      }
-    });
-
-    if (completed !== undefined && task.parentTaskId) {
-      await this.syncParentStatus(userId, task.parentTaskId, keys);
-    }
-
-    // Same shape as the non-cyclic branch: the task itself, no subtasks.
-    const updated = await this.prisma.task.findFirstOrThrow({
-      where: { id: task.id, userId },
-      include: { completions: this.currentCompletions(keys) },
-    });
-    return this.withDerivedState(updated, keys);
-  }
-
   private async saveCompletion(
     tx: Prisma.TransactionClient,
     taskId: string,
     periodKey: string,
+    now: Date,
     change: { completed?: boolean; progressCurrent?: number },
   ) {
-    const now = new Date();
     const { completed, progressCurrent } = change;
 
     await tx.taskCompletion.upsert({
@@ -326,43 +315,138 @@ export class TaskService {
     }
   }
 
+  /**
+   * A status change either bubbles up to the parent or, for a top-level
+   * task that just got completed, earns XP. Subtasks never earn XP.
+   */
+  private async onStatusChange(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    task: { id: string; type: TaskType; parentTaskId: string | null },
+    completed: boolean,
+    ctx: PeriodContext,
+  ): Promise<XpAward | null> {
+    if (task.parentTaskId) {
+      return this.syncParentStatus(tx, userId, task.parentTaskId, ctx);
+    }
+    return completed ? this.awardXp(tx, userId, task, ctx) : null;
+  }
+
   private async syncParentStatus(
+    tx: Prisma.TransactionClient,
     userId: string,
     parentId: string,
-    keys: PeriodKeys,
-  ) {
+    ctx: PeriodContext,
+  ): Promise<XpAward | null> {
+    const { keys } = ctx;
     const completions = this.currentCompletions(keys);
 
-    const parent = await this.prisma.task.findFirst({
+    const parent = await tx.task.findFirst({
       where: { id: parentId, userId },
       include: {
         completions,
         subtasks: { where: { userId }, include: { completions } },
       },
     });
-    if (!parent) return;
+    if (!parent) return null;
 
     const allCompleted = parent.subtasks.every(
       (t) => this.withDerivedState(t, keys).status === 'COMPLETED',
     );
     const newStatus = allCompleted ? TaskStatus.COMPLETED : TaskStatus.ACTIVE;
+    if (this.withDerivedState(parent, keys).status === newStatus) return null;
 
-    if (this.withDerivedState(parent, keys).status !== newStatus) {
-      const periodKey = keys[parent.type];
-      if (periodKey) {
-        await this.saveCompletion(this.prisma, parentId, periodKey, {
-          completed: allCompleted,
-        });
-      } else {
-        await this.prisma.task.update({
-          where: { id: parentId },
-          data: { status: newStatus },
-        });
-      }
-
-      if (parent.parentTaskId) {
-        await this.syncParentStatus(userId, parent.parentTaskId, keys);
-      }
+    const periodKey = keys[parent.type];
+    if (periodKey) {
+      await this.saveCompletion(tx, parentId, periodKey, ctx.now, {
+        completed: allCompleted,
+      });
+    } else {
+      await tx.task.update({
+        where: { id: parentId },
+        data: { status: newStatus },
+      });
     }
+
+    return this.onStatusChange(tx, userId, parent, allCompleted, ctx);
+  }
+
+  /**
+   * Records the XP for completing a top-level task and returns the award,
+   * or null when this task was already awarded in the current period.
+   */
+  private async awardXp(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    task: { id: string; type: TaskType },
+    ctx: PeriodContext,
+  ): Promise<XpAward | null> {
+    const streak = await this.loadStreak(tx, userId, task.type, ctx);
+    const { baseXp, multiplier, amount } = xpForCompletion(task.type, streak);
+
+    // The unique (taskId, periodKey) key decides whether this is the first
+    // completion in the period. No pre-check and no catching P2002: an
+    // error inside a Postgres transaction aborts the whole transaction.
+    const { count } = await tx.xpEvent.createMany({
+      data: [
+        {
+          userId,
+          taskId: task.id,
+          periodKey: ctx.keys[task.type] ?? LIFETIME_PERIOD_KEY,
+          baseXp,
+          multiplier,
+          amount,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    if (count === 0) return null;
+
+    const user = await tx.user.update({
+      where: { id: userId },
+      data: { xpTotal: { increment: amount } },
+    });
+    const level = levelForXp(user.xpTotal);
+    const leveledUp = level > user.level;
+    if (leveledUp) {
+      await tx.user.update({ where: { id: userId }, data: { level } });
+    }
+
+    return { amount, baseXp, multiplier, leveledUp, level };
+  }
+
+  /** Streak of `type` before the current period, read in one round trip. */
+  private async loadStreak(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    type: TaskType,
+    ctx: PeriodContext,
+  ): Promise<number> {
+    const rule = STREAK_RULES[type];
+    if (!rule) return 0;
+
+    const periodKeys = getPreviousPeriods(
+      type,
+      ctx.now,
+      ctx.timezone,
+      rule.lookback,
+    ).map((period) => period.key);
+
+    const tasks = await tx.task.findMany({
+      where: { userId, type, parentTaskId: null },
+      select: {
+        id: true,
+        type: true,
+        parentTaskId: true,
+        createdAt: true,
+        completions: {
+          where: { periodKey: { in: periodKeys } },
+          select: { taskId: true, periodKey: true, completedAt: true },
+        },
+      },
+    });
+
+    const completions = tasks.flatMap((task) => task.completions);
+    return computeStreak(tasks, completions, ctx.now, ctx.timezone, type);
   }
 }

@@ -238,4 +238,40 @@ describe('AuthService', () => {
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
+
+  describe('getProfile', () => {
+    it('returns the public fields plus level progress derived from xpTotal', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+        username: 'user',
+        passwordHash: 'secret-hash',
+        timezone: 'Europe/Warsaw',
+        xpTotal: 250,
+        level: 3,
+      });
+
+      expect(await service.getProfile('user-1')).toEqual({
+        id: 'user-1',
+        email: 'user@example.com',
+        username: 'user',
+        xpTotal: 250,
+        level: 3,
+        levelProgress: {
+          level: 3,
+          xpIntoLevel: 50,
+          xpForNextLevel: 110,
+          isMax: false,
+        },
+      });
+    });
+
+    it('rejects an unknown user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getProfile('ghost')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+  });
 });

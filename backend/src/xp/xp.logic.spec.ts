@@ -6,6 +6,7 @@ import {
   levelForXp,
   levelProgress,
   streakMultiplier,
+  xpForCompletion,
   type StreakCompletion,
   type StreakTask,
 } from './xp.logic';
@@ -272,5 +273,21 @@ describe('streakMultiplier', () => {
         rule.maxMultiplier,
       );
     }
+  });
+});
+
+describe('xpForCompletion', () => {
+  it.each([
+    ['DAILY', 0, { baseXp: 10, multiplier: 1, amount: 10 }],
+    ['DAILY', 3, { baseXp: 10, multiplier: 1.3, amount: 13 }],
+    ['DAILY', 10, { baseXp: 10, multiplier: 2, amount: 20 }],
+    ['WEEKLY', 0, { baseXp: 30, multiplier: 1, amount: 30 }],
+    // 37.5 and 52.5 round up.
+    ['WEEKLY', 1, { baseXp: 30, multiplier: 1.25, amount: 38 }],
+    ['WEEKLY', 3, { baseXp: 30, multiplier: 1.75, amount: 53 }],
+    ['LIFE', 7, { baseXp: 1000, multiplier: 1, amount: 1000 }],
+    ['SIDE_QUEST', 7, { baseXp: 20, multiplier: 1, amount: 20 }],
+  ] as const)('%s at streak %i', (type, streak, expected) => {
+    expect(xpForCompletion(type, streak)).toEqual(expected);
   });
 });

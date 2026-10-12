@@ -1,6 +1,6 @@
 import type { TaskType } from '../generated/prisma/client';
 import { getPreviousPeriods } from '../common/period';
-import { LEVEL_CURVE, STREAK_RULES } from './xp.config';
+import { BASE_XP, LEVEL_CURVE, STREAK_RULES } from './xp.config';
 
 export type LevelCurve = {
   BASE: number;
@@ -119,4 +119,11 @@ export function streakMultiplier(type: TaskType, streak: number): number {
   const multiplier = Math.min(rule.maxMultiplier, 1 + rule.step * streak);
   // Two decimals: 1 + 0.1 * 7 is 1.7000000000000002 in floating point.
   return Math.round(multiplier * 100) / 100;
+}
+
+/** What one completion of a top-level task is worth at the given streak. */
+export function xpForCompletion(type: TaskType, streak: number) {
+  const baseXp = BASE_XP[type];
+  const multiplier = streakMultiplier(type, streak);
+  return { baseXp, multiplier, amount: Math.round(baseXp * multiplier) };
 }
