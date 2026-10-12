@@ -1,4 +1,10 @@
-import { getPeriodEnd, getPeriodKey } from './period';
+import type { TaskType } from '../generated/prisma/client';
+import {
+  getPeriodEnd,
+  getPeriodKey,
+  getPeriodStart,
+  getPreviousPeriods,
+} from './period';
 
 const WARSAW = 'Europe/Warsaw';
 const NEW_YORK = 'America/New_York';
@@ -215,5 +221,78 @@ describe('getPeriodEnd', () => {
         getPeriodKey(type, now, WARSAW),
       );
     }
+  });
+});
+
+describe('getPeriodStart', () => {
+  const iso = (d: Date | null) => d?.toISOString();
+
+  it('returns null for LIFE and SIDE_QUEST', () => {
+    const now = new Date('2026-10-05T12:00:00Z');
+    expect(getPeriodStart('LIFE', now, WARSAW)).toBeNull();
+    expect(getPeriodStart('SIDE_QUEST', now, WARSAW)).toBeNull();
+  });
+
+  it('DAILY starts at the last local midnight', () => {
+    // 14:00 in Warsaw (UTC+2) -> the day began at 22:00 UTC the day before.
+    const now = new Date('2026-10-05T12:00:00Z');
+    expect(iso(getPeriodStart('DAILY', now, WARSAW))).toBe(
+      '2026-10-04T22:00:00.000Z',
+    );
+  });
+
+  it('WEEKLY starts at the last local Monday midnight', () => {
+    const thursday = new Date('2026-10-08T12:00:00Z');
+    expect(iso(getPeriodStart('WEEKLY', thursday, WARSAW))).toBe(
+      '2026-10-04T22:00:00.000Z',
+    );
+  });
+
+  it('is exactly where the previous period ends', () => {
+    const now = new Date('2026-12-31T12:00:00Z');
+    for (const type of ['DAILY', 'WEEKLY'] as const) {
+      const start = getPeriodStart(type, now, WARSAW)!;
+      const justBefore = new Date(start.getTime() - 1);
+      expect(getPeriodEnd(type, justBefore, WARSAW)).toEqual(start);
+      expect(getPeriodKey(type, start, WARSAW)).toBe(
+        getPeriodKey(type, now, WARSAW),
+      );
+    }
+  });
+});
+
+describe('getPreviousPeriods', () => {
+  const list = (type: TaskType, now: string, count: number) =>
+    getPreviousPeriods(type, new Date(now), WARSAW, count).map((p) => [
+      p.key,
+      p.start.toISOString(),
+    ]);
+
+  it('returns nothing for non-cyclic types', () => {
+    expect(list('LIFE', '2026-10-05T12:00:00Z', 3)).toEqual([]);
+  });
+
+  it('lists the earlier days newest first, without the current one', () => {
+    expect(list('DAILY', '2026-10-05T12:00:00Z', 3)).toEqual([
+      ['2026-10-04', '2026-10-03T22:00:00.000Z'],
+      ['2026-10-03', '2026-10-02T22:00:00.000Z'],
+      ['2026-10-02', '2026-10-01T22:00:00.000Z'],
+    ]);
+  });
+
+  it('crosses the ISO year boundary for weeks', () => {
+    // Wed 2027-01-06 is in 2027-W01; the week before is 2026-W53 (UTC+1).
+    expect(list('WEEKLY', '2027-01-06T12:00:00Z', 2)).toEqual([
+      ['2026-W53', '2026-12-27T23:00:00.000Z'],
+      ['2026-W52', '2026-12-20T23:00:00.000Z'],
+    ]);
+  });
+
+  it('follows local midnight across the DST change', () => {
+    // Sunday 2026-03-29 lasts 23 hours; the days before it start at 23:00 UTC.
+    expect(list('DAILY', '2026-03-30T12:00:00Z', 2)).toEqual([
+      ['2026-03-29', '2026-03-28T23:00:00.000Z'],
+      ['2026-03-28', '2026-03-27T23:00:00.000Z'],
+    ]);
   });
 });
