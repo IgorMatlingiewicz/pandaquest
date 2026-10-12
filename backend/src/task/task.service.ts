@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -167,12 +171,14 @@ export class TaskService {
   async update(userId: string, id: string, dto: UpdateTaskDto) {
     const keys = await this.getPeriodKeys(userId);
     const task = await this.findOneForPeriod(userId, id, keys);
+    this.assertNotMoved(task, dto);
+    const changes = this.editableFields(dto);
 
     const reachedTarget =
       task.completionMode === 'PROGRESS' &&
-      dto.progressCurrent !== undefined &&
+      changes.progressCurrent !== undefined &&
       task.progressTarget !== null &&
-      dto.progressCurrent >= task.progressTarget;
+      changes.progressCurrent >= task.progressTarget;
 
     const periodKey = keys[task.type];
     if (periodKey) {
@@ -181,12 +187,12 @@ export class TaskService {
         task,
         periodKey,
         keys,
-        dto,
+        changes,
         reachedTarget,
       );
     }
 
-    const data = { ...dto };
+    const data = { ...changes };
 
     if (reachedTarget) {
       data.status = TaskStatus.COMPLETED;
@@ -204,15 +210,55 @@ export class TaskService {
     return updated;
   }
 
+  /** A task keeps the category, and so the type, it was created with. */
+  private assertNotMoved(
+    task: { categoryId: string; type: TaskType },
+    dto: UpdateTaskDto,
+  ) {
+    const moved =
+      dto.categoryId !== undefined && dto.categoryId !== task.categoryId;
+    const retyped = dto.type !== undefined && dto.type !== task.type;
+
+    if (moved || retyped) {
+      throw new BadRequestException(
+        'Nie można zmienić kategorii ani typu zadania',
+      );
+    }
+  }
+
+  /**
+   * The only fields PATCH may write. Anything else in the request body
+   * (userId, createdAt, parentTaskId, ...) is dropped here.
+   */
+  private editableFields(dto: UpdateTaskDto) {
+    const {
+      title,
+      completionMode,
+      progressTarget,
+      deadline,
+      status,
+      progressCurrent,
+    } = dto;
+
+    return {
+      title,
+      completionMode,
+      progressTarget,
+      deadline,
+      status,
+      progressCurrent,
+    };
+  }
+
   private async updateCyclic(
     userId: string,
     task: { id: string; parentTaskId: string | null },
     periodKey: string,
     keys: PeriodKeys,
-    dto: UpdateTaskDto,
+    changes: ReturnType<TaskService['editableFields']>,
     reachedTarget: boolean,
   ) {
-    const { status, progressCurrent, ...template } = dto;
+    const { status, progressCurrent, ...template } = changes;
 
     const completed = reachedTarget
       ? true

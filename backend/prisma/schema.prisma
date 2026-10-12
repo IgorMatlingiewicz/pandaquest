@@ -26,6 +26,7 @@ model User {
 
   categories Category[]
   tasks Task[]
+  xpEvents XpEvent[]
   @@map("users")
 }
 
@@ -102,6 +103,7 @@ model Task {
   visibility      Visibility     @default(PRIVATE)
   order           Int            @default(0)
   completions     TaskCompletion[]
+  xpEvents        XpEvent[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -125,4 +127,25 @@ model TaskCompletion {
 
   @@unique([taskId, periodKey])
   @@map("task_completions")
+}
+
+// One row per XP award. The unique key is the database-level guard against
+// awarding the same task twice in one period.
+model XpEvent {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Null once the task is deleted: the XP stays earned.
+  taskId     String?
+  task       Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  // 'yyyy-MM-dd' (DAILY), 'yyyy-Www' (WEEKLY) or 'LIFETIME' (LIFE, SIDE_QUEST).
+  periodKey  String
+  baseXp     Int
+  multiplier Float
+  amount     Int
+  createdAt  DateTime @default(now())
+
+  @@unique([taskId, periodKey])
+  @@index([userId, createdAt])
+  @@map("xp_events")
 }

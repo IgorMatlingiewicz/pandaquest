@@ -129,7 +129,7 @@ describe('computeStreak', () => {
     id,
     type: 'DAILY' as TaskType,
     parentTaskId: null,
-    cycleSince: LONG_AGO,
+    createdAt: LONG_AGO,
     ...overrides,
   });
 
@@ -198,7 +198,7 @@ describe('computeStreak', () => {
     // "read" is added on Thursday at 10:00 Warsaw time.
     const tasks = [
       task('pills'),
-      task('read', { cycleSince: new Date('2026-10-08T08:00:00Z') }),
+      task('read', { createdAt: new Date('2026-10-08T08:00:00Z') }),
     ];
     const pills = done('pills', '2026-10-07', '2026-10-08', '2026-10-09');
 
@@ -218,7 +218,7 @@ describe('computeStreak', () => {
     it('treats a task added exactly at midnight as optional that day', () => {
       const atMidnight = [
         task('pills'),
-        task('read', { cycleSince: new Date('2026-10-07T22:00:00Z') }),
+        task('read', { createdAt: new Date('2026-10-07T22:00:00Z') }),
       ];
       expect(streak(atMidnight, pills, FRIDAY)).toBe(2);
     });

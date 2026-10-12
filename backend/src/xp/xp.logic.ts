@@ -64,7 +64,7 @@ export type StreakTask = {
   id: string;
   type: TaskType;
   parentTaskId: string | null;
-  cycleSince: Date;
+  createdAt: Date;
 };
 
 export type StreakCompletion = {
@@ -77,7 +77,7 @@ export type StreakCompletion = {
  * Full periods in a row right before the one containing `now`. A period is
  * full when at least one top-level task of `type` was due in it and every
  * due task was completed. A task is due only in periods that start after
- * its cycleSince, so the day (or week) it is added is a free one.
+ * it was created, so the day (or week) it is added is a free one.
  */
 export function computeStreak(
   tasks: StreakTask[],
@@ -101,7 +101,7 @@ export function computeStreak(
   let streak = 0;
   for (const period of getPreviousPeriods(type, now, timezone, rule.lookback)) {
     const due = candidates.filter(
-      (t) => t.cycleSince.getTime() < period.start.getTime(),
+      (t) => t.createdAt.getTime() < period.start.getTime(),
     );
     const full =
       due.length > 0 && due.every((t) => done.has(`${t.id}|${period.key}`));
