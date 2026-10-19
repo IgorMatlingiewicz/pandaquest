@@ -27,6 +27,8 @@ model User {
   categories Category[]
   tasks Task[]
   xpEvents XpEvent[]
+  badges UserBadge[]
+  completedPeriods CompletedPeriod[]
   @@map("users")
 }
 
@@ -129,16 +131,27 @@ model TaskCompletion {
   @@map("task_completions")
 }
 
-// One row per XP award. The unique key is the database-level guard against
-// awarding the same task twice in one period.
+enum XpSource {
+  TASK
+  BADGE
+}
+
+// One row per XP award. For TASK rows the unique key is the database-level
+// guard against awarding the same task twice in one period. BADGE rows have
+// a null taskId, and Postgres treats NULLs as distinct in a unique index, so
+// this key never rejects them: the guard for badges is the unique key on
+// UserBadge, inserted in the same transaction before the XP is written.
 model XpEvent {
   id         String   @id @default(uuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Null once the task is deleted: the XP stays earned.
+  // The default keeps the rows written before badges existed valid.
+  source     XpSource @default(TASK)
+  // Null once the task is deleted (the XP stays earned) and for BADGE rows.
   taskId     String?
   task       Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  // 'yyyy-MM-dd' (DAILY), 'yyyy-Www' (WEEKLY) or 'LIFETIME' (LIFE, SIDE_QUEST).
+  // 'yyyy-MM-dd' (DAILY), 'yyyy-Www' (WEEKLY) or 'LIFETIME' (LIFE,
+  // SIDE_QUEST and badges).
   periodKey  String
   baseXp     Int
   multiplier Float
@@ -148,4 +161,54 @@ model XpEvent {
   @@unique([taskId, periodKey])
   @@index([userId, createdAt])
   @@map("xp_events")
+}
+
+enum BadgeTier {
+  BRONZE
+  SILVER
+  GOLD
+  DIAMOND
+}
+
+// A badge tier the user has earned. Rows are only ever added: an earned
+// badge stays even if the tasks or categories behind it are deleted.
+model UserBadge {
+  id       String    @id @default(uuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Key of a definition in badges.config.ts. A plain string, not an enum,
+  // so the config stays the single source of truth for the catalog.
+  badgeKey String
+  tier     BadgeTier
+  earnedAt DateTime  @default(now())
+
+  // Each tier is earned (and its XP awarded) at most once per account.
+  // Also serves "all badges of a user" through its leading userId column.
+  @@unique([userId, badgeKey, tier])
+  @@map("user_badges")
+}
+
+// Periods a cycle's tasks can be completed in; a subset of TaskType.
+enum CycleType {
+  DAILY
+  WEEKLY
+}
+
+// A period in which every due top-level task of the cycle was completed,
+// recorded at the moment the last one was checked. Never removed: unchecking
+// or deleting tasks later does not rewrite history.
+model CompletedPeriod {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cycleType   CycleType
+  // Same format as TaskCompletion.periodKey. Zero-padded, so sorting the
+  // strings sorts the periods in time order.
+  periodKey   String
+  completedAt DateTime  @default(now())
+
+  // One row per period. The same index answers the streak query
+  // (userId, cycleType = ? ORDER BY periodKey DESC LIMIT n) without a sort.
+  @@unique([userId, cycleType, periodKey])
+  @@map("completed_periods")
 }

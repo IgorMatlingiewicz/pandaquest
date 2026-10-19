@@ -18,6 +18,8 @@ lerna-debug.log*
 # Tests
 /coverage
 /.nyc_output
+/reports
+/.stryker-tmp
 
 # IDEs and editors
 /.idea
