@@ -1,18 +1,9 @@
 import { BadgeTier } from '../generated/prisma/client';
-import {
-  BADGE_XP,
-  BADGES,
-  EVENT_METRICS,
-  tierXp,
-  type BadgeMetric,
-} from './badges.config';
+import { BADGE_XP, BADGES, isEventMetric, tierXp } from './badges.config';
 
 // Tiers in the order they are declared in the schema, lowest first.
 const TIER_ORDER = Object.values(BadgeTier);
 const rank = (tier: BadgeTier) => TIER_ORDER.indexOf(tier);
-
-const isEventMetric = (metric: BadgeMetric) =>
-  (EVENT_METRICS as readonly string[]).includes(metric);
 
 const isPositiveInteger = (n: number) => Number.isInteger(n) && n > 0;
 
@@ -74,6 +65,13 @@ describe('badge catalog', () => {
       });
     },
   );
+});
+
+describe('isEventMetric', () => {
+  it('tells event metrics from counted ones', () => {
+    expect(isEventMetric('lifeGoalCompleted')).toBe(true);
+    expect(isEventMetric('dailyStreak')).toBe(false);
+  });
 });
 
 describe('tierXp', () => {

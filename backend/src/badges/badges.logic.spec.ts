@@ -1,5 +1,11 @@
 import { BADGE_XP, BADGES, type BadgeDefinition } from './badges.config';
-import { currentStreak, metricCap, newlyEarned } from './badges.logic';
+import {
+  buildAchievements,
+  currentStreak,
+  metricCap,
+  newlyEarned,
+  taskEventMetrics,
+} from './badges.logic';
 
 // A small catalog of its own, so these tests do not change when the real
 // thresholds are tuned.
@@ -171,6 +177,117 @@ describe('currentStreak', () => {
     it('treats a missing 2026-W53 as a break, not as a skipped number', () => {
       expect(weekly(['2027-W01', '2026-W52'], wednesday)).toBe(1);
     });
+  });
+});
+
+describe('taskEventMetrics', () => {
+  const event = {
+    taskType: 'DAILY' as const,
+    isOwnCategory: false,
+    categoryAllDone: false,
+  };
+
+  it('measures all three event metrics, as 0 when nothing happened', () => {
+    expect(taskEventMetrics(event)).toEqual({
+      lifeGoalCompleted: 0,
+      ownCategoryTaskCompleted: 0,
+      ownCategoryAllDone: 0,
+    });
+  });
+
+  it('marks a completed LIFE task as a life goal', () => {
+    expect(taskEventMetrics({ ...event, taskType: 'LIFE' })).toMatchObject({
+      lifeGoalCompleted: 1,
+    });
+  });
+
+  it('marks a task from an own category', () => {
+    expect(taskEventMetrics({ ...event, isOwnCategory: true })).toMatchObject({
+      ownCategoryTaskCompleted: 1,
+      ownCategoryAllDone: 0,
+    });
+  });
+
+  it('marks an own category with every task done', () => {
+    const allDone = { ...event, isOwnCategory: true, categoryAllDone: true };
+    expect(taskEventMetrics(allDone)).toMatchObject({ ownCategoryAllDone: 1 });
+  });
+
+  it('never counts a default category as all done', () => {
+    const defaultDone = { ...event, categoryAllDone: true };
+    expect(taskEventMetrics(defaultDone)).toMatchObject({
+      ownCategoryAllDone: 0,
+    });
+  });
+});
+
+describe('buildAchievements', () => {
+  const EARNED_AT = new Date('2026-10-05T10:00:00Z');
+  const earnedRow = (badgeKey: string, tier: 'BRONZE' | 'DIAMOND') => ({
+    badgeKey,
+    tier,
+    earnedAt: EARNED_AT,
+  });
+  const view = (key: string, ...args: Parameters<typeof buildAchievements>) =>
+    buildAchievements(args[0], args[1], args[2] ?? CATALOG).find(
+      (a) => a.key === key,
+    );
+
+  it('lists every badge of the catalog, in catalog order', () => {
+    expect(buildAchievements({}, [], CATALOG).map((a) => a.key)).toEqual([
+      'streak',
+      'first',
+      'total',
+      'goal',
+    ]);
+  });
+
+  it('describes each tier by threshold and XP, honouring overrides', () => {
+    expect(view('streak', {}, [])?.tiers[0]).toEqual({
+      tier: 'BRONZE',
+      threshold: 3,
+      xp: BADGE_XP.BRONZE,
+      earnedAt: null,
+    });
+    expect(view('goal', {}, [])?.tiers[0].xp).toBe(7);
+  });
+
+  it('shows the measured value of a counted metric', () => {
+    expect(view('streak', { dailyStreak: 4 }, [])?.current).toBe(4);
+  });
+
+  it('shows 0 for a counted metric that was not measured', () => {
+    expect(view('streak', {}, [])?.current).toBe(0);
+  });
+
+  it('shows an event badge as 1 once earned and 0 before', () => {
+    expect(view('goal', {}, [])?.current).toBe(0);
+    expect(view('goal', {}, [earnedRow('goal', 'DIAMOND')])?.current).toBe(1);
+  });
+
+  it('marks only the earned tiers with their earnedAt', () => {
+    const tiers = view('streak', {}, [earnedRow('streak', 'BRONZE')])?.tiers;
+    expect(tiers?.map((t) => t.earnedAt)).toEqual([EARNED_AT, null, null]);
+  });
+
+  it('does not take an earned tier of another badge for this one', () => {
+    const first = view('total', {}, [earnedRow('first', 'BRONZE')]);
+    expect(first?.tiers[0].earnedAt).toBeNull();
+  });
+
+  it('skips stored badges that are no longer in the catalog', () => {
+    const all = buildAchievements(
+      {},
+      [earnedRow('retired', 'BRONZE')],
+      CATALOG,
+    );
+    expect(all.map((a) => a.key)).not.toContain('retired');
+  });
+
+  it('uses the real catalog by default', () => {
+    expect(buildAchievements({}, []).map((a) => a.key)).toEqual(
+      BADGES.map((b) => b.key),
+    );
   });
 });
 

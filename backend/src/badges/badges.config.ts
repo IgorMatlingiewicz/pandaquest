@@ -1,4 +1,4 @@
-import type { BadgeTier } from '../generated/prisma/client';
+import type { BadgeTier, CycleType } from '../generated/prisma/client';
 
 /*
  * Badge catalog: the single source of truth for which badges exist, what
@@ -23,6 +23,15 @@ export type CounterMetric =
   | 'weeklyStreak'
   | 'ownCategoryCount';
 
+/** The two metrics each cycle's CompletedPeriod rows are counted into. */
+export const CYCLE_METRICS: Record<
+  CycleType,
+  { total: CounterMetric; streak: CounterMetric }
+> = {
+  DAILY: { total: 'dailyTotal', streak: 'dailyStreak' },
+  WEEKLY: { total: 'weeklyTotal', streak: 'weeklyStreak' },
+};
+
 /** 0 or 1, read from the event that triggered the evaluation. */
 export const EVENT_METRICS = [
   'lifeGoalCompleted',
@@ -33,6 +42,10 @@ export const EVENT_METRICS = [
 export type EventMetric = (typeof EVENT_METRICS)[number];
 
 export type BadgeMetric = CounterMetric | EventMetric;
+
+export function isEventMetric(metric: BadgeMetric): metric is EventMetric {
+  return (EVENT_METRICS as readonly string[]).includes(metric);
+}
 
 export type BadgeTierRule = {
   tier: BadgeTier;

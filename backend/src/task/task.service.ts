@@ -13,9 +13,17 @@ import {
   TaskStatus,
   TaskType,
 } from '../generated/prisma/client';
-import { getPeriodKey, getPreviousPeriods } from '../common/period';
+import { doneSet, isPeriodFull } from '../common/full-period';
+import {
+  getPeriodKey,
+  getPeriodStart,
+  getPreviousPeriods,
+} from '../common/period';
+import { BadgesService } from '../badges/badges.service';
+import type { BadgeAward } from '../badges/badges.logic';
 import { LIFETIME_PERIOD_KEY, STREAK_RULES } from '../xp/xp.config';
-import { computeStreak, levelForXp, xpForCompletion } from '../xp/xp.logic';
+import { addXp } from '../xp/add-xp';
+import { computeStreak, xpForCompletion } from '../xp/xp.logic';
 
 // Current period key per cyclic task type; other types have no entry.
 type PeriodKeys = Partial<Record<TaskType, string>>;
@@ -32,6 +40,21 @@ export type XpAward = {
   level: number;
 };
 
+/** What completing a task earned, added to the PATCH /tasks/:id response. */
+type CompletionOutcome = {
+  xpAward: XpAward | null;
+  badgesEarned: BadgeAward[];
+};
+
+const NO_OUTCOME: CompletionOutcome = { xpAward: null, badgesEarned: [] };
+
+type CompletedTask = {
+  id: string;
+  type: TaskType;
+  parentTaskId: string | null;
+  categoryId: string;
+};
+
 type TaskWithCompletions = {
   type: TaskType;
   completionMode: string;
@@ -42,7 +65,10 @@ type TaskWithCompletions = {
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly badges: BadgesService,
+  ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
     const category = await this.prisma.category.findFirst({
@@ -202,9 +228,9 @@ export class TaskService {
         : status === TaskStatus.COMPLETED;
     const periodKey = ctx.keys[task.type];
 
-    // Everything a completion causes (state, parent sync, XP) commits or
-    // rolls back together.
-    const xpAward = await this.prisma.$transaction(async (tx) => {
+    // Everything a completion causes (state, parent sync, XP, badges)
+    // commits or rolls back together.
+    const outcome = await this.prisma.$transaction(async (tx) => {
       if (periodKey) {
         if (Object.values(template).some((v) => v !== undefined)) {
           await tx.task.update({ where: { id }, data: template });
@@ -226,17 +252,18 @@ export class TaskService {
         });
       }
 
-      if (completed === undefined) return null;
+      if (completed === undefined) return NO_OUTCOME;
       return this.onStatusChange(tx, userId, task, completed, ctx);
     });
 
     // The task itself, no subtasks. xpAward is null unless this request
-    // was the first completion of a top-level task in its period.
+    // was the first completion of a top-level task in its period;
+    // badgesEarned lists the badge tiers it earned, usually none.
     const updated = await this.prisma.task.findFirstOrThrow({
       where: { id, userId },
       include: { completions: this.currentCompletions(ctx.keys) },
     });
-    return { ...this.withDerivedState(updated, ctx.keys), xpAward };
+    return { ...this.withDerivedState(updated, ctx.keys), ...outcome };
   }
 
   /** A task keeps the category, and so the type, it was created with. */
@@ -317,19 +344,81 @@ export class TaskService {
 
   /**
    * A status change either bubbles up to the parent or, for a top-level
-   * task that just got completed, earns XP. Subtasks never earn XP.
+   * task that just got completed, records the period and earns XP and
+   * badges. Subtasks earn nothing themselves.
    */
   private async onStatusChange(
     tx: Prisma.TransactionClient,
     userId: string,
-    task: { id: string; type: TaskType; parentTaskId: string | null },
+    task: CompletedTask,
     completed: boolean,
     ctx: PeriodContext,
-  ): Promise<XpAward | null> {
+  ): Promise<CompletionOutcome> {
     if (task.parentTaskId) {
       return this.syncParentStatus(tx, userId, task.parentTaskId, ctx);
     }
-    return completed ? this.awardXp(tx, userId, task, ctx) : null;
+    if (!completed) return NO_OUTCOME;
+
+    await this.recordCompletedPeriod(tx, userId, task.type, ctx);
+    const xpAward = await this.awardXp(tx, userId, task, ctx);
+    // After recordCompletedPeriod, so the badges see today's entry.
+    const badgesEarned = await this.badges.onTaskCompleted(
+      tx,
+      userId,
+      task,
+      ctx,
+    );
+    return { xpAward, badgesEarned };
+  }
+
+  /**
+   * Adds a CompletedPeriod row once completing a top-level task has made the
+   * current period of its type full. Only ever adds: unchecking or deleting
+   * tasks later does not rewrite the history.
+   */
+  private async recordCompletedPeriod(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    type: TaskType,
+    ctx: PeriodContext,
+  ): Promise<void> {
+    if (type !== TaskType.DAILY && type !== TaskType.WEEKLY) return;
+
+    const window = {
+      // Non-null: cyclic types always have a period.
+      key: ctx.keys[type]!,
+      start: getPeriodStart(type, ctx.now, ctx.timezone)!,
+    };
+
+    const tasks = await tx.task.findMany({
+      where: { userId, type, parentTaskId: null },
+      select: {
+        id: true,
+        type: true,
+        createdAt: true,
+        completions: {
+          where: { periodKey: window.key },
+          select: { taskId: true, periodKey: true, completedAt: true },
+        },
+      },
+    });
+
+    const done = doneSet(tasks.flatMap((task) => task.completions));
+    if (!isPeriodFull(tasks, done, () => window)) return;
+
+    // The unique (userId, cycleType, periodKey) key keeps the first entry,
+    // like the XP award: no pre-check, no catching P2002.
+    await tx.completedPeriod.createMany({
+      data: [
+        {
+          userId,
+          cycleType: type,
+          periodKey: window.key,
+          completedAt: ctx.now,
+        },
+      ],
+      skipDuplicates: true,
+    });
   }
 
   private async syncParentStatus(
@@ -337,7 +426,7 @@ export class TaskService {
     userId: string,
     parentId: string,
     ctx: PeriodContext,
-  ): Promise<XpAward | null> {
+  ): Promise<CompletionOutcome> {
     const { keys } = ctx;
     const completions = this.currentCompletions(keys);
 
@@ -348,13 +437,15 @@ export class TaskService {
         subtasks: { where: { userId }, include: { completions } },
       },
     });
-    if (!parent) return null;
+    if (!parent) return NO_OUTCOME;
 
     const allCompleted = parent.subtasks.every(
       (t) => this.withDerivedState(t, keys).status === 'COMPLETED',
     );
     const newStatus = allCompleted ? TaskStatus.COMPLETED : TaskStatus.ACTIVE;
-    if (this.withDerivedState(parent, keys).status === newStatus) return null;
+    if (this.withDerivedState(parent, keys).status === newStatus) {
+      return NO_OUTCOME;
+    }
 
     const periodKey = keys[parent.type];
     if (periodKey) {
@@ -402,16 +493,7 @@ export class TaskService {
     });
     if (count === 0) return null;
 
-    const user = await tx.user.update({
-      where: { id: userId },
-      data: { xpTotal: { increment: amount } },
-    });
-    const level = levelForXp(user.xpTotal);
-    const leveledUp = level > user.level;
-    if (leveledUp) {
-      await tx.user.update({ where: { id: userId }, data: { level } });
-    }
-
+    const { level, leveledUp } = await addXp(tx, userId, amount);
     return { amount, baseXp, multiplier, leveledUp, level };
   }
 

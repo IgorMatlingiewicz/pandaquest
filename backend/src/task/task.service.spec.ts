@@ -1,268 +1,48 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TaskService } from './task.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { BadgesService } from '../badges/badges.service';
+import { BADGES, tierXp } from '../badges/badges.config';
 import { BASE_XP } from '../xp/xp.config';
 import {
   CompletionMode,
   TaskStatus,
   TaskType,
 } from '../generated/prisma/client';
+import {
+  buildTask,
+  createFakePrisma,
+  OWNER,
+  type CategoryRow,
+  type CompletedPeriodRow,
+  type CompletionRow,
+  type TaskRow,
+  type UserBadgeRow,
+  type UserRow,
+  type XpEventRow,
+} from '../testing/fake-prisma';
 
 // The service only needs PrismaService as an injection token here; the fake
-// below stands in for the database.
+// stands in for the database.
 jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
 }));
 
-type TaskRow = {
-  id: string;
-  userId: string;
-  categoryId: string;
-  parentTaskId: string | null;
-  title: string;
-  type: TaskType;
-  completionMode: CompletionMode;
-  progressCurrent: number | null;
-  progressTarget: number | null;
-  status: TaskStatus;
-  order: number;
-  createdAt: Date;
-};
-
-type CompletionRow = {
-  id: string;
-  taskId: string;
-  periodKey: string;
-  progressCurrent: number | null;
-  completedAt: Date | null;
-  firstCompletedAt: Date | null;
-};
-
-type XpEventRow = {
-  userId: string;
-  taskId: string | null;
-  periodKey: string;
-  baseXp: number;
-  multiplier: number;
-  amount: number;
-};
-
-type UserRow = { timezone: string; xpTotal: number; level: number };
-
-type CompletionFilter = { where: { periodKey: { in: string[] } } };
-
-type StreakTasksArgs = {
-  where: { userId: string; type: TaskType; parentTaskId: null };
-  select: { completions: CompletionFilter };
-};
-
-type UpdateUserArgs = {
-  data: { xpTotal?: { increment: number }; level?: number };
-};
-
-type FindTaskArgs = {
-  where: { id: string; userId: string };
-  include: {
-    completions: CompletionFilter;
-    subtasks?: { include: { completions: CompletionFilter } };
-  };
-};
-
-type UpsertArgs = {
-  where: { taskId_periodKey: { taskId: string; periodKey: string } };
-  create: Omit<CompletionRow, 'id' | 'progressCurrent'> & {
-    progressCurrent?: number;
-  };
-  update: { progressCurrent?: number; completedAt?: null };
-};
-
-type UpdateManyArgs = {
-  where: {
-    taskId: string;
-    periodKey: string;
-    completedAt?: null;
-    firstCompletedAt?: null;
-  };
-  data: Partial<Pick<CompletionRow, 'completedAt' | 'firstCompletedAt'>>;
-};
-
-/** In-memory stand-in for the parts of PrismaService that TaskService uses. */
-function createFakePrisma() {
-  const tasks: TaskRow[] = [];
-  const completions: CompletionRow[] = [];
-  const xpEvents: XpEventRow[] = [];
-  const user: UserRow = { timezone: 'Europe/Warsaw', xpTotal: 0, level: 1 };
-
-  const completionsOf = (taskId: string, filter: CompletionFilter) =>
-    completions.filter(
-      (c) =>
-        c.taskId === taskId && filter.where.periodKey.in.includes(c.periodKey),
-    );
-
-  const findTask = ({ where, include }: FindTaskArgs) => {
-    const task = tasks.find(
-      (t) => t.id === where.id && t.userId === where.userId,
-    );
-    if (!task) return null;
-
-    const subtasks = include.subtasks;
-    return {
-      ...task,
-      completions: completionsOf(task.id, include.completions),
-      ...(subtasks
-        ? {
-            subtasks: tasks
-              .filter((t) => t.parentTaskId === task.id)
-              .map((t) => ({
-                ...t,
-                completions: completionsOf(t.id, subtasks.include.completions),
-              })),
-          }
-        : {}),
-    };
-  };
-
-  const prisma = {
-    user: {
-      findUnique: () => Promise.resolve({ ...user }),
-      update: ({ data }: UpdateUserArgs) => {
-        if (data.xpTotal) user.xpTotal += data.xpTotal.increment;
-        if (data.level !== undefined) user.level = data.level;
-        return Promise.resolve({ ...user });
-      },
-    },
-    task: {
-      findMany: ({ where, select }: StreakTasksArgs) =>
-        Promise.resolve(
-          tasks
-            .filter(
-              (t) =>
-                t.userId === where.userId &&
-                t.type === where.type &&
-                t.parentTaskId === null,
-            )
-            .map((t) => ({
-              id: t.id,
-              type: t.type,
-              parentTaskId: t.parentTaskId,
-              createdAt: t.createdAt,
-              completions: completionsOf(t.id, select.completions),
-            })),
-        ),
-      findFirst: (args: FindTaskArgs) => Promise.resolve(findTask(args)),
-      findFirstOrThrow: (args: FindTaskArgs) => {
-        const task = findTask(args);
-        return task
-          ? Promise.resolve(task)
-          : Promise.reject(new Error('No Task found'));
-      },
-      update: (args: { where: { id: string }; data: Partial<TaskRow> }) => {
-        const task = tasks.find((t) => t.id === args.where.id)!;
-        // Like Prisma, `undefined` means "leave the column alone".
-        for (const [key, value] of Object.entries(args.data)) {
-          if (value !== undefined) Object.assign(task, { [key]: value });
-        }
-        return Promise.resolve({ ...task });
-      },
-      delete: ({ where }: { where: { id: string } }) => {
-        const [removed] = tasks.splice(
-          tasks.findIndex((t) => t.id === where.id),
-          1,
-        );
-        // Foreign keys: completions cascade, XP events stay with a null task.
-        for (let i = completions.length - 1; i >= 0; i--) {
-          if (completions[i].taskId === where.id) completions.splice(i, 1);
-        }
-        for (const event of xpEvents) {
-          if (event.taskId === where.id) event.taskId = null;
-        }
-        return Promise.resolve(removed);
-      },
-    },
-    taskCompletion: {
-      upsert: ({ where, create, update }: UpsertArgs) => {
-        const { taskId, periodKey } = where.taskId_periodKey;
-        const existing = completions.find(
-          (c) => c.taskId === taskId && c.periodKey === periodKey,
-        );
-
-        if (!existing) {
-          const row: CompletionRow = {
-            ...create,
-            id: `completion-${completions.length + 1}`,
-            progressCurrent: create.progressCurrent ?? null,
-          };
-          completions.push(row);
-          return Promise.resolve(row);
-        }
-
-        // Like Prisma, `undefined` means "leave the column alone".
-        if (update.progressCurrent !== undefined) {
-          existing.progressCurrent = update.progressCurrent;
-        }
-        if (update.completedAt !== undefined) {
-          existing.completedAt = update.completedAt;
-        }
-        return Promise.resolve(existing);
-      },
-      updateMany: ({ where, data }: UpdateManyArgs) => {
-        const matching = completions.filter(
-          (c) =>
-            c.taskId === where.taskId &&
-            c.periodKey === where.periodKey &&
-            (!('completedAt' in where) || c.completedAt === null) &&
-            (!('firstCompletedAt' in where) || c.firstCompletedAt === null),
-        );
-        matching.forEach((c) => Object.assign(c, data));
-        return Promise.resolve({ count: matching.length });
-      },
-    },
-    xpEvent: {
-      // Like the unique (taskId, periodKey) index with ON CONFLICT DO NOTHING.
-      createMany: ({ data }: { data: XpEventRow[] }) => {
-        const fresh = data.filter(
-          (row) =>
-            !xpEvents.some(
-              (e) => e.taskId === row.taskId && e.periodKey === row.periodKey,
-            ),
-        );
-        xpEvents.push(...fresh);
-        return Promise.resolve({ count: fresh.length });
-      },
-    },
-    $transaction: <T>(run: (tx: unknown) => Promise<T>) => run(prisma),
-  };
-
-  return { prisma, tasks, completions, xpEvents, user };
-}
-
-const OWNER = 'user-owner';
 const INTRUDER = 'user-intruder';
-
-function buildTask(overrides: Partial<TaskRow> & { id: string }): TaskRow {
-  return {
-    userId: OWNER,
-    categoryId: 'category-1',
-    parentTaskId: null,
-    title: overrides.id,
-    type: TaskType.DAILY,
-    completionMode: CompletionMode.BOOLEAN,
-    progressCurrent: null,
-    progressTarget: null,
-    status: TaskStatus.ACTIVE,
-    order: 0,
-    // Long before any test date, so the task is due in every period.
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    ...overrides,
-  };
-}
 
 describe('TaskService', () => {
   let service: TaskService;
+  let fake: ReturnType<typeof createFakePrisma>;
   let tasks: TaskRow[];
+  let categories: CategoryRow[];
   let completions: CompletionRow[];
   let xpEvents: XpEventRow[];
+  let completedPeriods: CompletedPeriodRow[];
+  let userBadges: UserBadgeRow[];
   let user: UserRow;
+  // Stands in for BadgesService everywhere except the "badges" tests, so the
+  // XP tests keep measuring task XP alone.
+  let badges: { onTaskCompleted: jest.Mock };
 
   // All within Monday 2026-10-05 in Europe/Warsaw (UTC+2).
   const MORNING = new Date('2026-10-05T06:00:00Z');
@@ -277,12 +57,19 @@ describe('TaskService', () => {
   beforeEach(() => {
     jest.useFakeTimers({ now: MORNING });
 
-    const fake = createFakePrisma();
+    fake = createFakePrisma();
     tasks = fake.tasks;
+    categories = fake.categories;
     completions = fake.completions;
     xpEvents = fake.xpEvents;
+    completedPeriods = fake.completedPeriods;
+    userBadges = fake.userBadges;
     user = fake.user;
-    service = new TaskService(fake.prisma as unknown as PrismaService);
+    badges = { onTaskCompleted: jest.fn().mockResolvedValue([]) };
+    service = new TaskService(
+      fake.prisma as unknown as PrismaService,
+      badges as unknown as BadgesService,
+    );
   });
 
   afterEach(() => {
@@ -394,13 +181,13 @@ describe('TaskService', () => {
       expect(tasks[0].status).toBe(TaskStatus.ACTIVE);
     });
 
-    it('returns the plain task shape plus xpAward, without completions or subtasks', async () => {
+    it('returns the plain task shape plus xpAward and badgesEarned, without completions or subtasks', async () => {
       const updated = await service.update(OWNER, 'pills', {
         status: TaskStatus.COMPLETED,
       });
 
       expect(Object.keys(updated).sort()).toEqual(
-        [...Object.keys(tasks[0]), 'xpAward'].sort(),
+        [...Object.keys(tasks[0]), 'xpAward', 'badgesEarned'].sort(),
       );
     });
 
@@ -730,6 +517,359 @@ describe('TaskService', () => {
         expect.objectContaining({ taskId: null, amount: 10 }),
       ]);
       expect(user.xpTotal).toBe(10);
+    });
+  });
+
+  describe('completed periods', () => {
+    const complete = (id: string) =>
+      service.update(OWNER, id, { status: TaskStatus.COMPLETED });
+    const uncheck = (id: string) =>
+      service.update(OWNER, id, { status: TaskStatus.ACTIVE });
+    const recorded = () =>
+      completedPeriods.map((p) => `${p.cycleType} ${p.periodKey}`);
+
+    describe('DAILY', () => {
+      beforeEach(() => {
+        // In two different categories: the day needs every daily task.
+        tasks.push(
+          buildTask({ id: 'pills' }),
+          buildTask({ id: 'walk', categoryId: 'own-category' }),
+        );
+      });
+
+      it('records the day when its last due task is completed', async () => {
+        await complete('pills');
+        expect(completedPeriods).toEqual([]);
+
+        jest.setSystemTime(NOON);
+        await complete('walk');
+        expect(completedPeriods).toEqual([
+          {
+            userId: OWNER,
+            cycleType: 'DAILY',
+            periodKey: '2026-10-05',
+            completedAt: NOON,
+          },
+        ]);
+      });
+
+      it('keeps the day when a task is unchecked afterwards', async () => {
+        await complete('pills');
+        await complete('walk');
+        await uncheck('walk');
+
+        expect(recorded()).toEqual(['DAILY 2026-10-05']);
+      });
+
+      it('records the day once, at the moment it first became full', async () => {
+        await complete('pills');
+        await complete('walk');
+        jest.setSystemTime(NOON);
+        await uncheck('walk');
+        jest.setSystemTime(EVENING);
+        await complete('walk');
+
+        expect(completedPeriods).toEqual([
+          expect.objectContaining({ completedAt: MORNING }),
+        ]);
+      });
+
+      it('keeps the history when a task is deleted', async () => {
+        await complete('pills');
+        await complete('walk');
+        await service.remove(OWNER, 'walk');
+        expect(recorded()).toEqual(['DAILY 2026-10-05']);
+
+        // Without "walk", the next day needs "pills" only.
+        jest.setSystemTime(NEXT_DAY);
+        await complete('pills');
+        expect(recorded()).toEqual(['DAILY 2026-10-05', 'DAILY 2026-10-06']);
+      });
+
+      it('does not wait for a task added today', async () => {
+        tasks.push(buildTask({ id: 'read', createdAt: MORNING }));
+
+        await complete('pills');
+        await complete('walk');
+
+        expect(recorded()).toEqual(['DAILY 2026-10-05']);
+      });
+
+      it('records nothing on the day every daily task was added', async () => {
+        // Same rule as the XP streak: a period with no due task is not full.
+        for (const task of tasks) task.createdAt = MORNING;
+
+        await complete('pills');
+        await complete('walk');
+        expect(completedPeriods).toEqual([]);
+
+        jest.setSystemTime(NEXT_DAY);
+        await complete('pills');
+        await complete('walk');
+        expect(recorded()).toEqual(['DAILY 2026-10-06']);
+      });
+
+      it('does not change the XP awarded', async () => {
+        await complete('pills');
+        await complete('walk');
+
+        expect(xpEvents.map((e) => e.amount)).toEqual([10, 10]);
+        expect(user.xpTotal).toBe(20);
+      });
+    });
+
+    it('records the day when the last task is completed through its subtasks', async () => {
+      tasks.push(
+        buildTask({ id: 'parent' }),
+        buildTask({ id: 'step', parentTaskId: 'parent' }),
+      );
+
+      await complete('step');
+
+      expect(recorded()).toEqual(['DAILY 2026-10-05']);
+    });
+
+    it('records the ISO week for WEEKLY tasks', async () => {
+      tasks.push(buildTask({ id: 'laundry', type: TaskType.WEEKLY }));
+
+      await complete('laundry');
+
+      expect(recorded()).toEqual(['WEEKLY 2026-W41']);
+    });
+
+    it.each([TaskType.LIFE, TaskType.SIDE_QUEST])(
+      'records nothing for %s tasks',
+      async (type) => {
+        tasks.push(buildTask({ id: 'goal', type }));
+
+        await complete('goal');
+
+        expect(completedPeriods).toEqual([]);
+      },
+    );
+  });
+
+  describe('badges', () => {
+    const complete = (id: string) =>
+      service.update(OWNER, id, { status: TaskStatus.COMPLETED });
+    const uncheck = (id: string) =>
+      service.update(OWNER, id, { status: TaskStatus.ACTIVE });
+    const pairs = (awards: { key: string; tier: string }[]) =>
+      awards.map((a) => `${a.key}:${a.tier}`);
+
+    describe('when they are evaluated', () => {
+      it('asks once a top-level task is completed, inside its transaction', async () => {
+        tasks.push(buildTask({ id: 'pills', categoryId: 'own' }));
+
+        await complete('pills');
+
+        expect(badges.onTaskCompleted).toHaveBeenCalledTimes(1);
+        expect(badges.onTaskCompleted).toHaveBeenCalledWith(
+          fake.prisma,
+          OWNER,
+          expect.objectContaining({ type: TaskType.DAILY, categoryId: 'own' }),
+          expect.objectContaining({ now: MORNING, timezone: 'Europe/Warsaw' }),
+        );
+      });
+
+      it('asks for the parent once its last subtask is completed', async () => {
+        tasks.push(
+          buildTask({ id: 'house', type: TaskType.LIFE }),
+          buildTask({
+            id: 'step-a',
+            type: TaskType.LIFE,
+            parentTaskId: 'house',
+          }),
+          buildTask({
+            id: 'step-b',
+            type: TaskType.LIFE,
+            parentTaskId: 'house',
+          }),
+        );
+
+        await complete('step-a');
+        expect(badges.onTaskCompleted).not.toHaveBeenCalled();
+
+        await complete('step-b');
+        expect(badges.onTaskCompleted).toHaveBeenCalledWith(
+          fake.prisma,
+          OWNER,
+          expect.objectContaining({ id: 'house' }),
+          expect.anything(),
+        );
+      });
+
+      it('does not ask when a task is unchecked or only edited', async () => {
+        tasks.push(buildTask({ id: 'pills' }));
+
+        await uncheck('pills');
+        await service.update(OWNER, 'pills', { title: 'Vitamins' });
+
+        expect(badges.onTaskCompleted).not.toHaveBeenCalled();
+      });
+
+      it('returns what was earned next to xpAward', async () => {
+        const award = { key: 'first_day', tier: 'BRONZE', xp: 25 };
+        badges.onTaskCompleted.mockResolvedValue([award]);
+        tasks.push(buildTask({ id: 'pills' }));
+
+        const result = await complete('pills');
+
+        expect(result.badgesEarned).toEqual([award]);
+        expect(result.xpAward).toMatchObject({ amount: 10 });
+      });
+
+      it('returns an empty list when the request does not complete anything', async () => {
+        tasks.push(buildTask({ id: 'pills' }));
+
+        const renamed = await service.update(OWNER, 'pills', {
+          title: 'Vitamins',
+        });
+
+        expect(renamed.badgesEarned).toEqual([]);
+      });
+    });
+
+    describe('with the real BadgesService', () => {
+      const xpOf = (key: string, tier: string) =>
+        tierXp(
+          BADGES.find((b) => b.key === key)!.tiers.find(
+            (t) => t.tier === tier,
+          )!,
+        );
+
+      beforeEach(() => {
+        service = new TaskService(
+          fake.prisma as unknown as PrismaService,
+          new BadgesService(fake.prisma as unknown as PrismaService),
+        );
+        categories.push(
+          { id: 'category-1', userId: OWNER, isDeletable: false },
+          { id: 'own', userId: OWNER, isDeletable: true },
+        );
+      });
+
+      it('earns first_day with the first full day, on top of the task XP', async () => {
+        tasks.push(buildTask({ id: 'pills' }));
+
+        const result = await complete('pills');
+
+        expect(result.badgesEarned).toEqual([
+          { key: 'first_day', tier: 'BRONZE', xp: xpOf('first_day', 'BRONZE') },
+        ]);
+        expect(user.xpTotal).toBe(10 + xpOf('first_day', 'BRONZE'));
+        expect(xpEvents.map((e) => e.source ?? 'TASK')).toEqual([
+          'TASK',
+          'BADGE',
+        ]);
+      });
+
+      it('earns each badge once across uncheck and re-check', async () => {
+        tasks.push(buildTask({ id: 'pills' }));
+
+        await complete('pills');
+        await uncheck('pills');
+        const again = await complete('pills');
+
+        expect(again.badgesEarned).toEqual([]);
+        expect(userBadges).toHaveLength(1);
+      });
+
+      it('earns several badges at once', async () => {
+        tasks.push(
+          buildTask({ id: 'house', type: TaskType.LIFE, categoryId: 'own' }),
+        );
+
+        const result = await complete('house');
+
+        expect(pairs(result.badgesEarned)).toEqual([
+          'life_goal:DIAMOND',
+          'own_category_first_task:BRONZE',
+          'own_category_all_done:SILVER',
+        ]);
+      });
+
+      it('earns own_category_all_done only with the last task of the category', async () => {
+        tasks.push(
+          buildTask({ id: 'stretch', categoryId: 'own' }),
+          buildTask({
+            id: 'paint',
+            type: TaskType.SIDE_QUEST,
+            categoryId: 'own',
+          }),
+        );
+
+        const first = await complete('paint');
+        expect(pairs(first.badgesEarned)).toEqual([
+          'own_category_first_task:BRONZE',
+        ]);
+
+        const last = await complete('stretch');
+        expect(pairs(last.badgesEarned)).toContain(
+          'own_category_all_done:SILVER',
+        );
+      });
+
+      it('does not count a subtask in an own category as a completed task', async () => {
+        tasks.push(
+          buildTask({
+            id: 'trip',
+            type: TaskType.SIDE_QUEST,
+            categoryId: 'own',
+          }),
+          buildTask({
+            id: 'tickets',
+            type: TaskType.SIDE_QUEST,
+            categoryId: 'own',
+            parentTaskId: 'trip',
+          }),
+          buildTask({
+            id: 'bags',
+            type: TaskType.SIDE_QUEST,
+            categoryId: 'own',
+            parentTaskId: 'trip',
+          }),
+        );
+
+        expect((await complete('tickets')).badgesEarned).toEqual([]);
+      });
+
+      it('earns a badge even when the completion pays no XP (no backfill)', async () => {
+        // Completed and paid before badges existed, then unchecked.
+        tasks.push(
+          buildTask({
+            id: 'paint',
+            type: TaskType.SIDE_QUEST,
+            categoryId: 'own',
+          }),
+        );
+        xpEvents.push({
+          userId: OWNER,
+          taskId: 'paint',
+          periodKey: 'LIFETIME',
+          baseXp: 20,
+          multiplier: 1,
+          amount: 20,
+        });
+
+        const result = await complete('paint');
+
+        expect(result.xpAward).toBeNull();
+        expect(pairs(result.badgesEarned)).toContain(
+          'own_category_first_task:BRONZE',
+        );
+      });
+
+      it('keeps earned badges when the task is unchecked or deleted', async () => {
+        tasks.push(buildTask({ id: 'house', type: TaskType.LIFE }));
+
+        await complete('house');
+        await uncheck('house');
+        await service.remove(OWNER, 'house');
+
+        expect(userBadges.map((b) => b.badgeKey)).toEqual(['life_goal']);
+        expect(user.xpTotal).toBe(1000 + xpOf('life_goal', 'DIAMOND'));
+      });
     });
   });
 

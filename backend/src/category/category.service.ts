@@ -9,20 +9,34 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ReorderItemDto } from '../common/dto/reorder.dto';
 import { getPeriodEnd } from '../common/period';
+import { BadgesService } from '../badges/badges.service';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly badges: BadgesService,
+  ) {}
 
+  /** The new category plus the badge tiers creating it earned. */
   async create(userId: string, dto: CreateCategoryDto) {
-    const count = await this.prisma.category.count({ where: { userId } });
+    return this.prisma.$transaction(async (tx) => {
+      const count = await tx.category.count({ where: { userId } });
 
-    return this.prisma.category.create({
-      data: {
-        ...dto,
+      const category = await tx.category.create({
+        data: {
+          ...dto,
+          userId,
+          order: count,
+        },
+      });
+
+      const badgesEarned = await this.badges.onCategoryCreated(
+        tx,
         userId,
-        order: count,
-      },
+        new Date(),
+      );
+      return { ...category, badgesEarned };
     });
   }
 

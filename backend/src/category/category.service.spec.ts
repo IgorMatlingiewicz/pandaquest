@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { BadgesService } from '../badges/badges.service';
 import { TaskType } from '../generated/prisma/client';
 
 jest.mock('../prisma/prisma.service', () => ({
@@ -17,21 +18,82 @@ describe('CategoryService', () => {
   const prisma = {
     user: { findUnique: jest.fn() },
     category: {
+      count: jest.fn(),
+      create: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
       delete: jest.fn(),
     },
     task: { count: jest.fn() },
+    $transaction: jest.fn(),
   };
+  const badges = { onCategoryCreated: jest.fn() };
   let service: CategoryService;
 
   beforeEach(() => {
     jest.resetAllMocks();
-    service = new CategoryService(prisma as unknown as PrismaService);
+    // The callback gets `prisma` itself as the transaction client.
+    prisma.$transaction.mockImplementation(
+      (run: (tx: typeof prisma) => Promise<unknown>) => run(prisma),
+    );
+    service = new CategoryService(
+      prisma as unknown as PrismaService,
+      badges as unknown as BadgesService,
+    );
   });
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  describe('create', () => {
+    const dto = { name: 'Muzyka' };
+
+    beforeEach(() => {
+      prisma.category.count.mockResolvedValue(4);
+      prisma.category.create.mockImplementation(({ data }: { data: object }) =>
+        Promise.resolve({ id: 'new', ...data }),
+      );
+      badges.onCategoryCreated.mockResolvedValue([]);
+    });
+
+    it('creates the category at the end of the list', async () => {
+      await service.create(USER_ID, dto);
+
+      expect(prisma.category.create).toHaveBeenCalledWith({
+        data: { ...dto, userId: USER_ID, order: 4 },
+      });
+    });
+
+    it('evaluates badges after the insert, in the same transaction', async () => {
+      jest.useFakeTimers({ now: new Date('2026-10-05T10:00:00Z') });
+
+      await service.create(USER_ID, dto);
+
+      expect(badges.onCategoryCreated).toHaveBeenCalledWith(
+        prisma,
+        USER_ID,
+        new Date('2026-10-05T10:00:00Z'),
+      );
+      expect(prisma.category.create.mock.invocationCallOrder[0]).toBeLessThan(
+        badges.onCategoryCreated.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('returns the category plus badgesEarned', async () => {
+      const award = { key: 'many_categories', tier: 'SILVER', xp: 150 };
+      badges.onCategoryCreated.mockResolvedValue([award]);
+
+      const created = await service.create(USER_ID, dto);
+
+      expect(created).toEqual({
+        id: 'new',
+        ...dto,
+        userId: USER_ID,
+        order: 4,
+        badgesEarned: [award],
+      });
+    });
   });
 
   describe('remove', () => {

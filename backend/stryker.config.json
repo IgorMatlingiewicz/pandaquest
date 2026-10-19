@@ -13,8 +13,9 @@
   "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.json",
   "coverageAnalysis": "perTest",
+  "timeoutMS": 15000,
   "ignorePatterns": ["/*", "!/src", "!/package.json", "!/tsconfig*.json"],
-  "mutate": ["src/badges/badges.logic.ts"],
+  "mutate": ["src/badges/badges.logic.ts", "src/common/full-period.ts"],
   "reporters": ["clear-text", "progress", "html"],
   "htmlReporter": { "fileName": "reports/mutation/mutation.html" },
   "thresholds": { "high": 90, "low": 75, "break": 75 }

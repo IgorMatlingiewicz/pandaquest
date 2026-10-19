@@ -1,7 +1,12 @@
-import type { BadgeTier, CycleType } from '../generated/prisma/client';
+import type {
+  BadgeTier,
+  CycleType,
+  TaskType,
+} from '../generated/prisma/client';
 import { getPeriodKey, getPreviousPeriods } from '../common/period';
 import {
   BADGES,
+  isEventMetric,
   tierXp,
   type BadgeDefinition,
   type BadgeMetric,
@@ -71,6 +76,79 @@ export function currentStreak(
     streak++;
   }
   return streak;
+}
+
+export type TaskCompletedEvent = {
+  taskType: TaskType;
+  isOwnCategory: boolean;
+  /** Every due task of the task's category is done in its current period. */
+  categoryAllDone: boolean;
+};
+
+/**
+ * The event badges as 0/1 metrics, so they go through the same
+ * "metric >= threshold" rule as every other badge.
+ */
+export function taskEventMetrics(event: TaskCompletedEvent): Metrics {
+  const { taskType, isOwnCategory, categoryAllDone } = event;
+  return {
+    lifeGoalCompleted: taskType === 'LIFE' ? 1 : 0,
+    ownCategoryTaskCompleted: isOwnCategory ? 1 : 0,
+    ownCategoryAllDone: isOwnCategory && categoryAllDone ? 1 : 0,
+  };
+}
+
+export type EarnedBadge = EarnedTier & { earnedAt: Date };
+
+export type AchievementTier = {
+  tier: BadgeTier;
+  threshold: number;
+  xp: number;
+  /** When the user earned this tier; null while not earned. */
+  earnedAt: Date | null;
+};
+
+export type Achievement = {
+  key: string;
+  /**
+   * The metric's value now; event badges show 1 once earned, else 0.
+   * Streaks are counted up to the highest threshold only (365 days, 48
+   * weeks), so a value at the top tier means "at least this many".
+   */
+  current: number;
+  tiers: AchievementTier[];
+};
+
+/**
+ * The achievements view: every badge of the catalog with its tiers, the
+ * current value of its metric and when each tier was earned. Stored badges
+ * that are no longer in the catalog are left out.
+ */
+export function buildAchievements(
+  metrics: Metrics,
+  earned: readonly EarnedBadge[],
+  catalog: readonly BadgeDefinition[] = BADGES,
+): Achievement[] {
+  const earnedAt = new Map(
+    earned.map((e) => [`${e.badgeKey}|${e.tier}`, e.earnedAt]),
+  );
+
+  return catalog.map((badge) => {
+    const tiers = badge.tiers.map((rule) => ({
+      tier: rule.tier,
+      threshold: rule.threshold,
+      xp: tierXp(rule),
+      earnedAt: earnedAt.get(`${badge.key}|${rule.tier}`) ?? null,
+    }));
+    // An event is not stored anywhere but in the badge it earned.
+    // Stryker disable next-line MethodExpression: equivalent mutant; event badges have a single tier (badges.config.spec), so some() and every() agree.
+    const anyEarned = tiers.some((t) => t.earnedAt !== null);
+    const current = isEventMetric(badge.metric)
+      ? Number(anyEarned)
+      : (metrics[badge.metric] ?? 0);
+
+    return { key: badge.key, current, tiers };
+  });
 }
 
 /**

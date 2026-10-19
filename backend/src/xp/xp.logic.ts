@@ -1,4 +1,5 @@
 import type { TaskType } from '../generated/prisma/client';
+import { doneSet, isPeriodFull } from '../common/full-period';
 import { getPreviousPeriods } from '../common/period';
 import { BASE_XP, LEVEL_CURVE, STREAK_RULES } from './xp.config';
 
@@ -74,10 +75,9 @@ export type StreakCompletion = {
 };
 
 /**
- * Full periods in a row right before the one containing `now`. A period is
- * full when at least one top-level task of `type` was due in it and every
- * due task was completed. A task is due only in periods that start after
- * it was created, so the day (or week) it is added is a free one.
+ * Full periods in a row right before the one containing `now`, counting the
+ * top-level tasks of `type`. What makes a period full (including the spare
+ * period for a new task) is defined once, in isPeriodFull.
  */
 export function computeStreak(
   tasks: StreakTask[],
@@ -92,20 +92,11 @@ export function computeStreak(
   const candidates = tasks.filter(
     (t) => t.type === type && t.parentTaskId === null,
   );
-  const done = new Set(
-    completions
-      .filter((c) => c.completedAt !== null)
-      .map((c) => `${c.taskId}|${c.periodKey}`),
-  );
+  const done = doneSet(completions);
 
   let streak = 0;
   for (const period of getPreviousPeriods(type, now, timezone, rule.lookback)) {
-    const due = candidates.filter(
-      (t) => t.createdAt.getTime() < period.start.getTime(),
-    );
-    const full =
-      due.length > 0 && due.every((t) => done.has(`${t.id}|${period.key}`));
-    if (!full) break;
+    if (!isPeriodFull(candidates, done, () => period)) break;
     streak++;
   }
   return streak;
