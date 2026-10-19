@@ -10,6 +10,11 @@ const en: typeof pl = {
     logout: "Log out",
     genericError: "Something went wrong",
   },
+  nav: {
+    home: "Home",
+    achievements: "Achievements",
+    menu: "Menu",
+  },
   auth: {
     email: "Email",
     password: "Password",

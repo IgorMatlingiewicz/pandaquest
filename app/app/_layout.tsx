@@ -18,7 +18,6 @@ import {
   useAppColorScheme,
 } from "@/context/ColorSchemeContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { TopBar } from "@/components/top-bar";
 
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import "@/global.css";
@@ -41,14 +40,8 @@ function RootNavigator() {
   return (
     <Stack>
       <Stack.Protected guard={!!token}>
-        <Stack.Screen
-          name="(tabs)"
-          options={{ headerShown: true, header: () => <TopBar /> }}
-        />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
+        {/* The top bar with the page links is part of the (tabs) layout. */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

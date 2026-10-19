@@ -8,6 +8,11 @@ export default {
     logout: "Wyloguj",
     genericError: "Coś poszło nie tak",
   },
+  nav: {
+    home: "Strona główna",
+    achievements: "Osiągnięcia",
+    menu: "Menu",
+  },
   auth: {
     email: "Email",
     password: "Hasło",
