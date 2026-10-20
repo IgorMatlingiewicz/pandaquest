@@ -15,14 +15,12 @@ import { useAppColorScheme } from "@/context/ColorSchemeContext";
 import { setLanguage } from "@/lib/languageStorage";
 import { type SupportedLanguage } from "@/i18n";
 import { NavItem } from "@/components/nav-item";
+import { WIDE_SCREEN } from "@/constants/layout";
 import { HStack } from "@/components/ui/hstack";
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 
-// From this width up the links fit next to the title; below it they go
-// into the burger menu (Tailwind's `md` breakpoint).
-const WIDE_SCREEN = 768;
 const MENU_ANIMATION_MS = 180;
 
 function NavLinks() {

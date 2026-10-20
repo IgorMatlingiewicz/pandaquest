@@ -8,7 +8,11 @@ export default function TabLayout() {
   return (
     <Tabs style={{ flex: 1 }}>
       <TopBar />
-      <TabSlot />
+      {/* TabSlot's own container grows with its content and never shrinks,
+          so on web a page would get the full height of its content and its
+          ScrollView would have nothing to scroll. flex + minHeight: 0 keep
+          the page within the space left under the top bar. */}
+      <TabSlot style={{ flex: 1, minHeight: 0 }} />
       <TabList style={{ display: "none" }}>
         <TabTrigger name="index" href="/" />
         <TabTrigger name="achievements" href="/achievements" />
