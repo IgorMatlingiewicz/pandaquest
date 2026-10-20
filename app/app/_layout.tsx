@@ -18,6 +18,7 @@ import {
   useAppColorScheme,
 } from "@/context/ColorSchemeContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { RewardsProvider } from "@/context/RewardsContext";
 
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import "@/global.css";
@@ -59,7 +60,9 @@ function AppShell() {
         value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
       >
         <AuthProvider>
-          <RootNavigator />
+          <RewardsProvider>
+            <RootNavigator />
+          </RewardsProvider>
         </AuthProvider>
         <StatusBar style="auto" />
       </NavigationThemeProvider>

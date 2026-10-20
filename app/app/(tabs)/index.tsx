@@ -15,8 +15,9 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { API_URL } from "@/constants/api";
 import { type CategoryColor } from "@/constants/category-colors";
-import { useXpToast, type XpAward } from "@/hooks/use-xp-toast";
+import { useRewards } from "@/context/RewardsContext";
 import { alertMessage, confirmAsync } from "@/lib/confirm";
+import type { RewardOutcome } from "@/types/api";
 import { reorderItems } from "@/lib/reorder";
 
 type Category = {
@@ -31,8 +32,8 @@ type Category = {
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const { token, user, refreshUser } = useAuth();
-  const showXpAward = useXpToast();
+  const { token, user } = useAuth();
+  const { report } = useRewards();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,8 +65,8 @@ export default function HomeScreen() {
     loadData();
   }, [loadData]);
 
-  // Sends a task change and reacts to what the server decided: a toast when
-  // this change earned XP, then fresh user data for the top bar.
+  // Sends a task change and shows whatever the server says it earned (XP,
+  // badges, a new level).
   async function patchTask(taskId: string, body: Record<string, unknown>) {
     const response = await fetch(`${API_URL}/tasks/${taskId}`, {
       method: "PATCH",
@@ -77,11 +78,8 @@ export default function HomeScreen() {
     });
     if (!response.ok) return;
 
-    const data: { xpAward: XpAward | null } = await response.json();
-    if (data.xpAward) {
-      showXpAward(data.xpAward);
-      await refreshUser();
-    }
+    const data: RewardOutcome = await response.json();
+    await report(data);
   }
 
   async function handleToggleTask(task: Task) {
@@ -114,11 +112,16 @@ export default function HomeScreen() {
         body: JSON.stringify(values),
       });
     } else {
-      await fetch(`${API_URL}/categories`, {
+      const response = await fetch(`${API_URL}/categories`, {
         method: "POST",
         headers,
         body: JSON.stringify(values),
       });
+      // A new category can earn a badge ("many_categories").
+      if (response.ok) {
+        const data: RewardOutcome = await response.json();
+        await report({ badgesEarned: data.badgesEarned });
+      }
     }
 
     await loadData();

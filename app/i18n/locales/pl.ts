@@ -78,6 +78,32 @@ export default {
     maxLevel: "Maksymalny poziom",
     gained: "+{{amount}} XP",
     gainedWithMultiplier: "+{{amount}} XP (×{{multiplier}})",
-    levelUp: "Awans! Poziom {{level}}",
+  },
+  rewards: {
+    badgeTitle: "Nowa odznaka!",
+    levelUpTitle: "Awans!",
+    xp: "+{{amount}} XP",
+    close: "Super!",
+  },
+  badges: {
+    tiers: {
+      BRONZE: "Brąz",
+      SILVER: "Srebro",
+      GOLD: "Złoto",
+      DIAMOND: "Diament",
+    },
+    // Keyed like backend/src/badges/badges.config.ts.
+    names: {
+      daily_total: "Dzień za dniem",
+      daily_streak: "Seria dzienna",
+      weekly_total: "Tydzień za tygodniem",
+      weekly_streak: "Seria tygodniowa",
+      life_goal: "Cel życia",
+      first_day: "Pierwszy dzień",
+      first_week: "Pierwszy tydzień",
+      own_category_first_task: "Po swojemu",
+      own_category_all_done: "Komplet",
+      many_categories: "Dużo na głowie",
+    },
   },
 };

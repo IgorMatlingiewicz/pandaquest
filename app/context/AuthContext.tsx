@@ -12,7 +12,7 @@ type LevelProgress = {
   isMax: boolean;
 };
 
-type User = {
+export type User = {
   id: string;
   email: string;
   username: string;
@@ -32,7 +32,8 @@ type AuthContextType = {
   ) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  /** Re-reads the profile and returns it; null when that failed. */
+  refreshUser: () => Promise<User | null>;
 };
 
 // IANA name of the device timezone; the backend uses it to decide when
@@ -57,31 +58,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function loadStoredToken() {
       const stored = await getToken();
       if (stored) {
-        const valid = await fetchMe(stored);
-        if (valid) setTokenState(stored);
+        const me = await fetchMe(stored);
+        if (me) setTokenState(stored);
       }
       setIsLoading(false);
     }
     loadStoredToken();
   }, []);
 
-  async function fetchMe(authToken: string): Promise<boolean> {
+  async function fetchMe(authToken: string): Promise<User | null> {
     try {
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      if (!response.ok) return false;
-      const data = await response.json();
+      if (!response.ok) return null;
+      const data: User = await response.json();
       setUser(data);
-      return true;
+      return data;
     } catch {
-      return false;
+      return null;
     }
   }
 
   // Re-reads the profile, e.g. after the server awarded XP.
   async function refreshUser() {
-    if (token) await fetchMe(token);
+    return token ? fetchMe(token) : null;
   }
 
   async function login(email: string, password: string) {

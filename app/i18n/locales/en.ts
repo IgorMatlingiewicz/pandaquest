@@ -80,7 +80,32 @@ const en: typeof pl = {
     maxLevel: "Max level",
     gained: "+{{amount}} XP",
     gainedWithMultiplier: "+{{amount}} XP (×{{multiplier}})",
-    levelUp: "Level up! Level {{level}}",
+  },
+  rewards: {
+    badgeTitle: "New badge!",
+    levelUpTitle: "Level up!",
+    xp: "+{{amount}} XP",
+    close: "Nice!",
+  },
+  badges: {
+    tiers: {
+      BRONZE: "Bronze",
+      SILVER: "Silver",
+      GOLD: "Gold",
+      DIAMOND: "Diamond",
+    },
+    names: {
+      daily_total: "Day after day",
+      daily_streak: "Daily streak",
+      weekly_total: "Week after week",
+      weekly_streak: "Weekly streak",
+      life_goal: "Life goal",
+      first_day: "First day",
+      first_week: "First week",
+      own_category_first_task: "My own way",
+      own_category_all_done: "Full set",
+      many_categories: "A lot on my plate",
+    },
   },
 };
 
