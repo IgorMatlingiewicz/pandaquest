@@ -61,5 +61,6 @@
     "tailwindcss": "4.2.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@11.25.0"
 }
