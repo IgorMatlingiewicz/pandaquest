@@ -31,6 +31,9 @@ const en: typeof pl = {
       submit: "Sign up",
       haveAccount: "Already have an account? Log in",
       failed: "Registration failed",
+      emailTaken: "This email is already taken",
+      invalidData:
+        "Check your details: a valid email, a name of at least 3 characters, a password of at least 8",
     },
   },
   tasks: {
@@ -46,6 +49,8 @@ const en: typeof pl = {
       message: 'The task "{{title}}" will be deleted.',
     },
     deleteCategoryError: "Couldn't delete the category",
+    deleteCategoryForbidden: "This category can't be deleted",
+    deleteCategoryNotEmpty: "This category still has tasks. Delete them first",
     resetIn: {
       daily: "{{hours}}h {{minutes}}m",
       weekly: "{{days}}d {{hours}}h {{minutes}}m",

@@ -29,6 +29,9 @@ export default {
       submit: "Zarejestruj się",
       haveAccount: "Masz już konto? Zaloguj się",
       failed: "Rejestracja nie powiodła się",
+      emailTaken: "Ten email jest już zajęty",
+      invalidData:
+        "Sprawdź dane: poprawny email, nazwa od 3 znaków, hasło od 8 znaków",
     },
   },
   tasks: {
@@ -44,6 +47,8 @@ export default {
       message: 'Zadanie "{{title}}" zostanie usunięte.',
     },
     deleteCategoryError: "Nie udało się usunąć kategorii",
+    deleteCategoryForbidden: "Tej kategorii nie można usunąć",
+    deleteCategoryNotEmpty: "Ta kategoria zawiera zadania. Usuń je najpierw",
     resetIn: {
       daily: "{{hours}} godz. {{minutes}} min",
       weekly: "{{days}} d {{hours}} godz. {{minutes}} min",

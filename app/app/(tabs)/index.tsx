@@ -16,6 +16,7 @@ import { VStack } from "@/components/ui/vstack";
 import { API_URL } from "@/constants/api";
 import { type CategoryColor } from "@/constants/category-colors";
 import { useRewards } from "@/context/RewardsContext";
+import { deleteCategoryErrorKey } from "@/lib/api-errors";
 import { alertMessage, confirmAsync } from "@/lib/confirm";
 import type { RewardOutcome } from "@/types/api";
 import { reorderItems } from "@/lib/reorder";
@@ -140,10 +141,9 @@ export default function HomeScreen() {
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => null);
       alertMessage(
         t("tasks.deleteCategoryError"),
-        err?.message ?? t("common.tryAgain"),
+        t(deleteCategoryErrorKey(response.status)),
       );
       return;
     }

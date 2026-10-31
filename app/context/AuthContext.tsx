@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
 import { API_URL } from "@/constants/api";
-import { loginErrorKey } from "@/lib/auth-errors";
+import { loginErrorKey, registerErrorKey } from "@/lib/api-errors";
 
 // Computed by the backend; the app never derives a level from XP itself.
 type LevelProgress = {
@@ -123,9 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timezone: getDeviceTimezone(),
     });
     if (!response.ok) {
-      if (response.status >= 500) throw new Error(t("common.genericError"));
-      const err = await response.json().catch(() => null);
-      throw new Error(err?.message || t("auth.register.failed"));
+      throw new Error(t(registerErrorKey(response.status)));
     }
     await login(email, password);
   }
