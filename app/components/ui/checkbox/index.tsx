@@ -26,13 +26,6 @@ const StyledUIIcon = styled(UIIcon, {
   className: "style",
 });
 
-const IconWrapper = React.forwardRef<
-  React.ComponentRef<typeof UIIcon>,
-  React.ComponentPropsWithoutRef<typeof UIIcon>
->(function IconWrapper({ ...props }, ref) {
-  return <StyledUIIcon {...props} ref={ref} />;
-});
-
 const SCOPE = "CHECKBOX";
 
 const UICheckbox = createCheckbox({
@@ -42,7 +35,7 @@ const UICheckbox = createCheckbox({
       ? withStyleContext(View, SCOPE)
       : withStyleContext(Pressable, SCOPE),
   Group: View,
-  Icon: IconWrapper,
+  Icon: StyledUIIcon,
   Label: LabelWrapper,
   Indicator: IndicatorWrapper,
 });
@@ -125,29 +118,7 @@ type ICheckboxIconProps = React.ComponentPropsWithoutRef<
 const CheckboxIcon = React.forwardRef<
   React.ComponentRef<typeof UICheckbox.Icon>,
   ICheckboxIconProps
->(function CheckboxIcon({ className, size, ...props }, ref) {
-  if (typeof size === "number") {
-    return (
-      <UICheckbox.Icon
-        ref={ref}
-        {...props}
-        className={checkboxIconStyle({ class: className })}
-        size={size}
-      />
-    );
-  } else if (
-    (props.height !== undefined || props.width !== undefined) &&
-    size === undefined
-  ) {
-    return (
-      <UICheckbox.Icon
-        ref={ref}
-        {...props}
-        className={checkboxIconStyle({ class: className })}
-      />
-    );
-  }
-
+>(function CheckboxIcon({ className, ...props }, ref) {
   return (
     <UICheckbox.Icon
       className={checkboxIconStyle({ class: className })}
