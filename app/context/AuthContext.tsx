@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
 import { API_URL } from "@/constants/api";
+import { loginErrorKey } from "@/lib/auth-errors";
 
 // Computed by the backend; the app never derives a level from XP itself.
 type LevelProgress = {
@@ -85,18 +86,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return token ? fetchMe(token) : null;
   }
 
+  // fetch rejects only when no answer came at all, so that is the one case
+  // reported as a connection problem.
+  async function postAuth(path: string, body: object) {
+    try {
+      return await fetch(`${API_URL}/auth/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      throw new Error(t("common.noConnection"));
+    }
+  }
+
   async function login(email: string, password: string) {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        timezone: getDeviceTimezone(),
-      }),
+    const response = await postAuth("login", {
+      email,
+      password,
+      timezone: getDeviceTimezone(),
     });
     if (!response.ok) {
-      throw new Error(t("auth.login.invalidCredentials"));
+      throw new Error(t(loginErrorKey(response.status)));
     }
     const data = await response.json();
     await setToken(data.accessToken);
@@ -105,19 +116,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function register(email: string, username: string, password: string) {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        username,
-        password,
-        timezone: getDeviceTimezone(),
-      }),
+    const response = await postAuth("register", {
+      email,
+      username,
+      password,
+      timezone: getDeviceTimezone(),
     });
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message || t("auth.register.failed"));
+      if (response.status >= 500) throw new Error(t("common.genericError"));
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || t("auth.register.failed"));
     }
     await login(email, password);
   }

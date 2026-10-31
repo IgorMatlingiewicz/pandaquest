@@ -9,6 +9,7 @@ const en: typeof pl = {
     tryAgain: "Try again.",
     logout: "Log out",
     genericError: "Something went wrong",
+    noConnection: "Can't reach the server",
   },
   nav: {
     home: "Home",

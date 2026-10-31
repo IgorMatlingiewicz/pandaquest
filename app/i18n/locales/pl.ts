@@ -7,6 +7,7 @@ export default {
     tryAgain: "Spróbuj ponownie.",
     logout: "Wyloguj",
     genericError: "Coś poszło nie tak",
+    noConnection: "Brak połączenia z serwerem",
   },
   nav: {
     home: "Strona główna",
