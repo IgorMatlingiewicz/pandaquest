@@ -75,6 +75,7 @@ Konto załóż na ekranie rejestracji. Domyślne kategorie i przykładowe zadani
 | `backend/` | `pnpm test` | testy jednostkowe i scenariuszowe (Jest) |
 | `backend/` | `pnpm test:mutation` | jakość testów logiki odznak (StrykerJS), raport w `reports/mutation/` |
 | `backend/` | `pnpm lint` | ESLint z automatycznymi poprawkami |
+| `app/` | `pnpm test` | logika widoku i kolejka nagród (jest-expo, `app/__tests__/`) |
 | `app/` | `pnpm typecheck` | typy TypeScript |
 | `app/` | `pnpm lint` | ESLint |
 
