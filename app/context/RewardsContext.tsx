@@ -1,5 +1,5 @@
 import { createContext, useContext, useRef, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, type User } from "@/context/AuthContext";
 import { RewardModal } from "@/components/rewards/reward-modal";
 import { useXpToast } from "@/hooks/use-xp-toast";
 import { rewardsToAnnounce, type Reward } from "@/lib/rewards";
@@ -28,6 +28,23 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
   // A ref, not state: changing it must not re-render anything.
   const announced = useRef<{ userId: string; level: number } | null>(null);
 
+  /**
+   * Returns the level announced so far and moves it up to the fresh one.
+   * Runs after the await in `report`: a response handled meanwhile has already
+   * moved `announced`, so the same level is not announced twice.
+   */
+  function advanceAnnouncedLevel(fresh: User, levelAtStart?: number) {
+    const level =
+      announced.current?.userId === fresh.id
+        ? announced.current.level
+        : (levelAtStart ?? fresh.level);
+    announced.current = {
+      userId: fresh.id,
+      level: Math.max(level, fresh.level),
+    };
+    return level;
+  }
+
   async function report({ xpAward, badgesEarned = [] }: RewardOutcome) {
     if (xpAward) showXpToast(xpAward);
     if (!xpAward && badgesEarned.length === 0) return;
@@ -37,23 +54,14 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
     const levelAtStart = user?.level;
     // The level comes from the server, which counts task and badge XP alike.
     const fresh = await refreshUser();
-    if (!fresh) return;
 
-    // Read after the await: another response handled meanwhile has already
-    // moved `announced`, so the same level is not announced twice.
-    const announcedLevel =
-      announced.current?.userId === fresh.id
-        ? announced.current.level
-        : (levelAtStart ?? fresh.level);
-    announced.current = {
-      userId: fresh.id,
-      level: Math.max(announcedLevel, fresh.level),
-    };
-
+    // Without a profile the level is unknown, but the badges are stored on
+    // the server and still have to be shown. A new level then waits for the
+    // next response.
     const rewards = rewardsToAnnounce(
       badgesEarned,
-      announcedLevel,
-      fresh.level,
+      fresh ? advanceAnnouncedLevel(fresh, levelAtStart) : 0,
+      fresh?.level ?? 0,
     );
     if (rewards.length === 0) return;
     setQueue((current) => [
