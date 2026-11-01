@@ -254,7 +254,7 @@ export function StreakGoalActions({
       </Button>
       <Button variant="ghost" className="min-h-11" onPress={onDelete}>
         <ButtonText className="text-destructive">
-          {t(compact ? "streaks.delete" : "streaks.deleteGoal")}
+          {t(compact ? "common.delete" : "streaks.deleteGoal")}
         </ButtonText>
       </Button>
     </Row>

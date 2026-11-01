@@ -4,6 +4,10 @@ import type { ListRenderItemInfo } from "react-native";
 import { DraxList } from "react-native-drax";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
+import {
+  ConfirmDialog,
+  type ConfirmRequest,
+} from "@/components/confirm-dialog";
 import { CategoryCard } from "@/components/tasks/category-card";
 import {
   CategorySheet,
@@ -16,8 +20,8 @@ import { VStack } from "@/components/ui/vstack";
 import { API_URL } from "@/constants/api";
 import { type CategoryColor } from "@/constants/category-colors";
 import { useRewards } from "@/context/RewardsContext";
+import { alertMessage } from "@/lib/alert";
 import { deleteCategoryErrorKey } from "@/lib/api-errors";
-import { alertMessage, confirmAsync } from "@/lib/confirm";
 import type { RewardOutcome } from "@/types/api";
 import { reorderItems } from "@/lib/reorder";
 
@@ -46,6 +50,9 @@ export default function HomeScreen() {
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
   const [taskCategoryId, setTaskCategoryId] = useState<string | undefined>(
     undefined,
+  );
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(
+    null,
   );
 
   const loadData = useCallback(async () => {
@@ -128,13 +135,19 @@ export default function HomeScreen() {
     await loadData();
   }
 
-  async function handleDeleteCategory(category: Category) {
-    const ok = await confirmAsync(
-      t("tasks.deleteCategoryConfirm.title"),
-      t("tasks.deleteCategoryConfirm.message", { name: category.name }),
-    );
-    if (!ok) return;
+  function handleDeleteCategory(category: Category) {
+    setConfirmRequest({
+      title: t("tasks.deleteCategoryConfirm.title"),
+      message: t("tasks.deleteCategoryConfirm.message", {
+        name: category.name,
+      }),
+      confirmLabel: t("common.delete"),
+      destructive: true,
+      onConfirm: () => deleteCategory(category),
+    });
+  }
 
+  async function deleteCategory(category: Category) {
     const response = await fetch(`${API_URL}/categories/${category.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
@@ -151,13 +164,17 @@ export default function HomeScreen() {
     await loadData();
   }
 
-  async function handleDeleteTask(task: Task) {
-    const ok = await confirmAsync(
-      t("tasks.deleteTaskConfirm.title"),
-      t("tasks.deleteTaskConfirm.message", { title: task.title }),
-    );
-    if (!ok) return;
+  function handleDeleteTask(task: Task) {
+    setConfirmRequest({
+      title: t("tasks.deleteTaskConfirm.title"),
+      message: t("tasks.deleteTaskConfirm.message", { title: task.title }),
+      confirmLabel: t("common.delete"),
+      destructive: true,
+      onConfirm: () => deleteTask(task),
+    });
+  }
 
+  async function deleteTask(task: Task) {
     await fetch(`${API_URL}/tasks/${task.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
@@ -329,6 +346,11 @@ export default function HomeScreen() {
               : undefined
         }
         onSave={handleSaveTask}
+      />
+
+      <ConfirmDialog
+        request={confirmRequest}
+        onClose={() => setConfirmRequest(null)}
       />
     </View>
   );

@@ -17,7 +17,7 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { useIsWide } from "@/hooks/use-is-wide";
 import { useStreakGoals } from "@/hooks/use-streak-goals";
-import { alertMessage } from "@/lib/confirm";
+import { alertMessage } from "@/lib/alert";
 import { elapsedParts, randomIndex, recordDays } from "@/lib/streak-goals";
 import type { StreakGoal } from "@/types/api";
 

@@ -3,6 +3,7 @@ import type pl from "./pl";
 const en: typeof pl = {
   common: {
     cancel: "Cancel",
+    delete: "Delete",
     save: "Save",
     saving: "Saving...",
     loading: "Loading...",
@@ -123,7 +124,6 @@ const en: typeof pl = {
       "+{{xp}} XP for every full day of each goal. Goals are private.",
     swipeHint: "Swipe sideways to change the goal",
     relapse: "I slipped",
-    delete: "Delete",
     deleteGoal: "Delete goal",
     relapseConfirm: {
       title: "Reset the counter?",

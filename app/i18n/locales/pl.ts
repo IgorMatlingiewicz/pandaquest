@@ -1,6 +1,7 @@
 export default {
   common: {
     cancel: "Anuluj",
+    delete: "Usuń",
     save: "Zapisz",
     saving: "Zapisywanie...",
     loading: "Ładowanie...",
@@ -120,7 +121,6 @@ export default {
       "+{{xp}} XP za każdą pełną dobę każdego celu. Cele są prywatne.",
     swipeHint: "Przesuń w bok, aby zmienić cel",
     relapse: "Potknąłem się",
-    delete: "Usuń",
     deleteGoal: "Usuń cel",
     relapseConfirm: {
       title: "Zresetować licznik?",
