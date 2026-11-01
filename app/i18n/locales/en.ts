@@ -80,6 +80,10 @@ const en: typeof pl = {
       progressWithTarget: "Progress (target: {{target}})",
     },
   },
+  streaks: {
+    invalidName: "Enter a valid goal name.",
+    limitReached: "You already have the maximum number of goals.",
+  },
   xp: {
     level: "Level {{level}}",
     progress: "{{current}} / {{total}} XP",

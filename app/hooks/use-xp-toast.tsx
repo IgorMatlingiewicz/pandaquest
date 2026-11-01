@@ -2,8 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import type { XpAward } from "@/types/api";
 
-// A short toast for XP from a task. Badges and level-ups get a window of
-// their own (RewardsContext).
+// A short toast for XP from a task or a streak goal. Badges and level-ups get
+// a window of their own (RewardsContext).
 export function useXpToast() {
   const toast = useToast();
   const { t, i18n } = useTranslation();

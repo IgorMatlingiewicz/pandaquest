@@ -27,3 +27,9 @@ export function deleteCategoryErrorKey(status: number): string {
   if (status === 409) return "tasks.deleteCategoryNotEmpty";
   return "common.tryAgain";
 }
+
+export function createStreakGoalErrorKey(status: number): string {
+  if (status === 400) return "streaks.invalidName";
+  if (status === 409) return "streaks.limitReached";
+  return "common.tryAgain";
+}

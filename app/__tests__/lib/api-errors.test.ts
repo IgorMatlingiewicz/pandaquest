@@ -1,4 +1,5 @@
 import {
+  createStreakGoalErrorKey,
   deleteCategoryErrorKey,
   loginErrorKey,
   registerErrorKey,
@@ -33,5 +34,15 @@ describe("deleteCategoryErrorKey", () => {
     [500, "common.tryAgain"],
   ])("maps %i to %s", (status, key) => {
     expect(deleteCategoryErrorKey(status)).toBe(key);
+  });
+});
+
+describe("createStreakGoalErrorKey", () => {
+  it.each([
+    [400, "streaks.invalidName"],
+    [409, "streaks.limitReached"],
+    [500, "common.tryAgain"],
+  ])("maps %i to %s", (status, key) => {
+    expect(createStreakGoalErrorKey(status)).toBe(key);
   });
 });

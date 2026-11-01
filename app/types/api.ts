@@ -1,7 +1,7 @@
 // Shapes of the backend responses the app reads, kept in step with
 // backend/src by hand.
 
-// The xpAward field of a PATCH /tasks/:id response.
+// The xpAward field of PATCH /tasks/:id and of the streak goal responses.
 export type XpAward = {
   amount: number;
   baseXp: number;
@@ -33,8 +33,35 @@ export type Achievement = {
 };
 
 // What a change that can earn something returns next to the changed item:
-// PATCH /tasks/:id has both fields, POST /categories only badgesEarned.
+// PATCH /tasks/:id and the streak goal sync and relapse have both fields,
+// POST /categories only badgesEarned.
 export type RewardOutcome = {
   xpAward?: XpAward | null;
   badgesEarned?: BadgeAward[];
+};
+
+// One goal in GET /streak-goals; startedAt is an ISO date set by the server.
+export type StreakGoal = {
+  id: string;
+  name: string;
+  startedAt: string;
+  fullDays: number;
+  recordSec: number;
+  relapseCount: number;
+};
+
+export type StreakGoalTier = { tier: BadgeTier; threshold: number };
+
+export type StreakGoalRules = {
+  maxGoals: number;
+  nameMaxLength: number;
+  dayXp: number;
+  tiers: StreakGoalTier[];
+};
+
+// serverNow is the moment the response was made, to correct the device clock.
+export type StreakGoalsResponse = {
+  serverNow: string;
+  rules: StreakGoalRules;
+  goals: StreakGoal[];
 };

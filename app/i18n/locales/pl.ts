@@ -78,6 +78,10 @@ export default {
       progressWithTarget: "Postęp (cel: {{target}})",
     },
   },
+  streaks: {
+    invalidName: "Podaj poprawną nazwę celu.",
+    limitReached: "Masz już maksymalną liczbę celów.",
+  },
   xp: {
     level: "Poziom {{level}}",
     progress: "{{current}} / {{total}} XP",

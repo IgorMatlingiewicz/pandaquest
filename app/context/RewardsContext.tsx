@@ -9,7 +9,7 @@ type QueuedReward = Reward & { id: number };
 
 type RewardsContextType = {
   /**
-   * Shows everything a server response earned: a toast for task XP, then a
+   * Shows everything a server response earned: a toast for plain XP, then a
    * window for each badge and for a new level, one after another.
    */
   report: (outcome: RewardOutcome) => Promise<void>;
