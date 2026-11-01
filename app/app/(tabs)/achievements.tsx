@@ -1,10 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  RefreshControl,
-  ScrollView,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
@@ -13,13 +8,13 @@ import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import { API_URL } from "@/constants/api";
-import { WIDE_SCREEN } from "@/constants/layout";
+import { useIsWide } from "@/hooks/use-is-wide";
 import type { Achievement } from "@/types/api";
 
 export default function AchievementsScreen() {
   const { token } = useAuth();
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
+  const isWide = useIsWide();
   const [achievements, setAchievements] = useState<Achievement[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,7 +67,6 @@ export default function AchievementsScreen() {
 
   const tiers = achievements.flatMap((a) => a.tiers);
   const earned = tiers.filter((tier) => tier.earnedAt !== null).length;
-  const isWide = width >= WIDE_SCREEN;
 
   return (
     <ScrollView

@@ -2,7 +2,9 @@
 
 Gamifikowany system zarządzania produktywnością: praca inżynierska.
 
-Użytkownik prowadzi zadania dzienne, tygodniowe, życiowe i poboczne w kategoriach. Za ich wykonywanie dostaje punkty doświadczenia (XP), poziomy, mnożnik za serie oraz odznaki. Aplikacja działa na telefonie i w przeglądarce, po polsku i po angielsku.
+Użytkownik prowadzi zadania dzienne, tygodniowe, życiowe i poboczne w kategoriach. Za ich wykonywanie dostaje punkty doświadczenia (XP), poziomy, mnożnik za serie oraz odznaki. Moduł Ciągi liczy czas bez wybranego nawyku, na przykład papierosów, i nagradza każdą pełną dobę. Czas liczy wyłącznie serwer. Aplikacja działa na telefonie i w przeglądarce, po polsku i po angielsku.
+
+Nazwy celów z modułu Ciągi mogą zdradzać sprawy zdrowotne. Są prywatne, nie trafiają do logów ani do innych użytkowników, ale w bazie leżą bez szyfrowania.
 
 ## Struktura repozytorium
 

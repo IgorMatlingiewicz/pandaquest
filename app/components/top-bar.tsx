@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, useWindowDimensions } from "react-native";
+import { Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   FadeInUp,
@@ -12,10 +12,10 @@ import { TabTrigger } from "expo-router/ui";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { useAppColorScheme } from "@/context/ColorSchemeContext";
+import { useIsWide } from "@/hooks/use-is-wide";
 import { setLanguage } from "@/lib/languageStorage";
 import { type SupportedLanguage } from "@/i18n";
 import { NavItem } from "@/components/nav-item";
-import { WIDE_SCREEN } from "@/constants/layout";
 import { HStack } from "@/components/ui/hstack";
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
@@ -30,6 +30,9 @@ function NavLinks() {
     <>
       <TabTrigger name="index" asChild>
         <NavItem label={t("nav.home")} icon="home-outline" />
+      </TabTrigger>
+      <TabTrigger name="streaks" asChild>
+        <NavItem label={t("nav.streaks")} icon="timer-outline" />
       </TabTrigger>
       <TabTrigger name="achievements" asChild>
         <NavItem label={t("nav.achievements")} icon="trophy-outline" />
@@ -107,13 +110,11 @@ function LevelBar() {
 
 export function TopBar() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const isWide = useIsWide();
   const { user } = useAuth();
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
-
-  const isWide = width >= WIDE_SCREEN;
 
   // Picking a page closes the menu, and so does growing the window wide.
   useEffect(() => {

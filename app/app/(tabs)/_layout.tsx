@@ -25,6 +25,7 @@ export default function TabLayout() {
       <TabSlot style={{ flex: 1, minHeight: 0 }} />
       <TabList style={{ display: "none" }}>
         <TabTrigger name="index" href="/" />
+        <TabTrigger name="streaks" href="/streaks" />
         <TabTrigger name="achievements" href="/achievements" />
       </TabList>
     </Tabs>

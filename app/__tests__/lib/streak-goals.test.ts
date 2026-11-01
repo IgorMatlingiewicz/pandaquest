@@ -3,8 +3,11 @@ import {
   crossedFullDay,
   elapsedParts,
   fullDaysAt,
+  pageAt,
   randomIndex,
+  recordDays,
   tierProgress,
+  twoDigits,
 } from "@/lib/streak-goals";
 import type { StreakGoalTier } from "@/types/api";
 
@@ -156,6 +159,50 @@ describe("tierProgress", () => {
       next: null,
       ratio: 1,
     });
+  });
+});
+
+describe("recordDays", () => {
+  const goal = (recordSec: number) => ({ startedAt: STARTED_AT, recordSec });
+  const DAY_SEC = 24 * 60 * 60;
+
+  it("is the record the server sent while the attempt is shorter", () => {
+    expect(recordDays(goal(12 * DAY_SEC), START + 3 * DAY)).toBe(12);
+  });
+
+  it("follows the running attempt once it is longer", () => {
+    expect(recordDays(goal(12 * DAY_SEC), START + 20 * DAY)).toBe(20);
+  });
+
+  it("counts only full days of the record", () => {
+    expect(recordDays(goal(DAY_SEC - 1), START)).toBe(0);
+    expect(recordDays(goal(DAY_SEC), START)).toBe(1);
+  });
+});
+
+describe("twoDigits", () => {
+  it("pads one digit and leaves two as they are", () => {
+    expect(twoDigits(7)).toBe("07");
+    expect(twoDigits(0)).toBe("00");
+    expect(twoDigits(41)).toBe("41");
+  });
+});
+
+describe("pageAt", () => {
+  it("is the page closest to the scroll position", () => {
+    expect(pageAt(0, 400, 3)).toBe(0);
+    expect(pageAt(199, 400, 3)).toBe(0);
+    expect(pageAt(200, 400, 3)).toBe(1);
+    expect(pageAt(800, 400, 3)).toBe(2);
+  });
+
+  it("stays in range when the list bounces past either end", () => {
+    expect(pageAt(-30, 400, 3)).toBe(0);
+    expect(pageAt(900, 400, 3)).toBe(2);
+  });
+
+  it("is the first page before the width is known", () => {
+    expect(pageAt(100, 0, 3)).toBe(0);
   });
 });
 

@@ -80,6 +80,35 @@ export function tierProgress(
   };
 }
 
+/**
+ * The longest attempt in full days. The server's record stops at the moment
+ * of the read, so a running attempt can pass it while the screen is open.
+ */
+export function recordDays(
+  goal: Pick<StreakGoal, "startedAt" | "recordSec">,
+  nowMs: number,
+): number {
+  return Math.max(
+    Math.floor((goal.recordSec * SECOND) / DAY),
+    fullDaysAt(goal.startedAt, nowMs),
+  );
+}
+
+export function twoDigits(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** The page of a horizontal pager shown at a scroll position. */
+export function pageAt(
+  offsetPx: number,
+  pageWidth: number,
+  pageCount: number,
+): number {
+  if (pageWidth <= 0) return 0;
+  const page = Math.round(offsetPx / pageWidth);
+  return Math.min(Math.max(page, 0), pageCount - 1);
+}
+
 export function randomIndex(
   length: number,
   random: () => number = Math.random,
