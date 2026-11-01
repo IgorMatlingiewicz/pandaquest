@@ -7,7 +7,10 @@ import {
   type StreakGoalRow,
 } from '../testing/fake-prisma';
 import { STREAK_GOAL_DAY_XP } from '../xp/xp.config';
-import { MAX_STREAK_GOALS } from './streak-goals.config';
+import {
+  MAX_STREAK_GOALS,
+  STREAK_GOAL_NAME_MAX_LENGTH,
+} from './streak-goals.config';
 import { StreakGoalsService } from './streak-goals.service';
 
 jest.mock('../prisma/prisma.service', () => ({
@@ -122,9 +125,20 @@ describe('StreakGoalsService', () => {
   });
 
   describe('findAll', () => {
-    it('returns the time of the server, also without goals', async () => {
+    it('returns the time of the server and the rules, also without goals', async () => {
       await expect(service.findAll(OWNER)).resolves.toEqual({
         serverNow: START.toISOString(),
+        rules: {
+          maxGoals: MAX_STREAK_GOALS,
+          nameMaxLength: STREAK_GOAL_NAME_MAX_LENGTH,
+          dayXp: STREAK_GOAL_DAY_XP,
+          tiers: [
+            { tier: 'BRONZE', threshold: 7 },
+            { tier: 'SILVER', threshold: 30 },
+            { tier: 'GOLD', threshold: 100 },
+            { tier: 'DIAMOND', threshold: 365 },
+          ],
+        },
         goals: [],
       });
     });

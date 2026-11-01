@@ -10,7 +10,7 @@ import type { XpAward } from '../task/task.service';
 import { addXp } from '../xp/add-xp';
 import { LIFETIME_PERIOD_KEY, STREAK_GOAL_DAY_XP } from '../xp/xp.config';
 import { CreateStreakGoalDto } from './dto/create-streak-goal.dto';
-import { MAX_STREAK_GOALS } from './streak-goals.config';
+import { MAX_STREAK_GOALS, STREAK_GOAL_RULES } from './streak-goals.config';
 import {
   attemptDurationSec,
   fullDaysElapsed,
@@ -46,6 +46,7 @@ export class StreakGoalsService {
 
     return {
       serverNow: now.toISOString(),
+      rules: STREAK_GOAL_RULES,
       goals: goals.map((goal) =>
         goalView(goal, closed.get(goal.id) ?? NO_CLOSED_ATTEMPTS, now),
       ),
