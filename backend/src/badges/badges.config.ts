@@ -15,13 +15,17 @@ import type { BadgeTier, CycleType } from '../generated/prisma/client';
  * them harder would add complexity without protecting anything of value.
  */
 
-/** Counted from the user's history (CompletedPeriod rows, categories). */
+/**
+ * Counted from the user's data: CompletedPeriod rows, categories, and the
+ * full days of the longest running streak goal attempt.
+ */
 export type CounterMetric =
   | 'dailyTotal'
   | 'dailyStreak'
   | 'weeklyTotal'
   | 'weeklyStreak'
-  | 'ownCategoryCount';
+  | 'ownCategoryCount'
+  | 'streakGoalDays';
 
 /** The two metrics each cycle's CompletedPeriod rows are counted into. */
 export const CYCLE_METRICS: Record<
@@ -141,10 +145,20 @@ export const BADGES: readonly BadgeDefinition[] = [
     metric: 'ownCategoryCount',
     tiers: [{ tier: 'SILVER', threshold: 7 }],
   },
-  // Planned, not added yet because their modules do not exist:
+  {
+    // One badge across all streak goals: a tier is earned by the first goal
+    // to reach it, and a second goal reaching it earns nothing more.
+    key: 'streak_days',
+    metric: 'streakGoalDays',
+    tiers: [
+      { tier: 'BRONZE', threshold: 7 },
+      { tier: 'SILVER', threshold: 30 },
+      { tier: 'GOLD', threshold: 100 },
+      { tier: 'DIAMOND', threshold: 365 },
+    ],
+  },
+  // Planned, not added yet because its module does not exist:
   // - tutorial: BRONZE for finishing the onboarding tutorial (event).
-  // - one badge per addiction: BRONZE 7, SILVER 30, GOLD 100, DIAMOND 365
-  //   days without it.
 ];
 
 /** What earning this tier is worth: its own override, else the XP table. */

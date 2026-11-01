@@ -110,6 +110,7 @@ export default {
       own_category_first_task: "Po swojemu",
       own_category_all_done: "Komplet",
       many_categories: "Dużo na głowie",
+      streak_days: "Wytrwałość",
     },
     // {{count}} is the threshold of the tier being described. Polish picks
     // _one (1), _few (2-4, 22-24, ...) or _many (5-21, 25-31, ...); _other
@@ -142,6 +143,10 @@ export default {
       many_categories_few: "Miej {{count}} własne kategorie",
       many_categories_many: "Miej {{count}} własnych kategorii",
       many_categories_other: "Miej {{count}} własnej kategorii",
+      streak_days_one: "Wytrwaj {{count}} dzień w jednym ciągu",
+      streak_days_few: "Wytrwaj {{count}} dni w jednym ciągu",
+      streak_days_many: "Wytrwaj {{count}} dni w jednym ciągu",
+      streak_days_other: "Wytrwaj {{count}} dnia w jednym ciągu",
     },
   },
   achievements: {

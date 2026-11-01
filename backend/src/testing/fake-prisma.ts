@@ -16,7 +16,9 @@ import {
  * on the same arrays, so there is no isolation, no row locking and no
  * rollback when the callback throws. Two requests racing to earn the same
  * badge, or a rollback leaving no half-written award, can only be checked
- * against a real Postgres (an integration test), not here.
+ * against a real Postgres (an integration test), not here. The same goes for
+ * the conditional updates of streak goals and for their limit: requests never
+ * interleave here, so a test has to stage a stale read by hand.
  */
 
 export const OWNER = 'user-owner';
@@ -74,6 +76,30 @@ export type UserBadgeRow = {
 
 export type UserRow = { timezone: string; xpTotal: number; level: number };
 
+export type StreakGoalRow = {
+  id: string;
+  userId: string;
+  name: string;
+  startedAt: Date;
+  daysRewarded: number;
+  createdAt: Date;
+};
+
+export type StreakAttemptRow = {
+  id: string;
+  goalId: string;
+  startedAt: Date;
+  endedAt: Date;
+  durationSec: number;
+};
+
+type StreakGoalWhere = {
+  id: string;
+  userId?: string;
+  startedAt?: Date;
+  daysRewarded?: number;
+};
+
 type CompletionFilter = { where: { periodKey: { in: string[] } | string } };
 
 type FindTasksArgs = {
@@ -125,7 +151,19 @@ export function createFakePrisma() {
   const xpEvents: XpEventRow[] = [];
   const completedPeriods: CompletedPeriodRow[] = [];
   const userBadges: UserBadgeRow[] = [];
+  const streakGoals: StreakGoalRow[] = [];
+  const streakAttempts: StreakAttemptRow[] = [];
   const user: UserRow = { timezone: 'Europe/Warsaw', xpTotal: 0, level: 1 };
+  let nextId = 0;
+
+  // Dates are compared by the moment, like the columns they stand in for.
+  const matchesGoal = (goal: StreakGoalRow, where: StreakGoalWhere) =>
+    goal.id === where.id &&
+    (where.userId === undefined || goal.userId === where.userId) &&
+    (where.startedAt === undefined ||
+      goal.startedAt.getTime() === where.startedAt.getTime()) &&
+    (where.daysRewarded === undefined ||
+      goal.daysRewarded === where.daysRewarded);
 
   const completionsOf = (taskId: string, filter: CompletionFilter) => {
     const { periodKey } = filter.where;
@@ -353,6 +391,88 @@ export function createFakePrisma() {
         return Promise.resolve(fresh.map((row) => ({ ...row })));
       },
     },
+    streakGoal: {
+      count: ({ where }: { where: { userId: string } }) =>
+        Promise.resolve(
+          streakGoals.filter((g) => g.userId === where.userId).length,
+        ),
+      create: ({
+        data,
+      }: {
+        data: Pick<StreakGoalRow, 'userId' | 'name' | 'startedAt'>;
+      }) => {
+        const row: StreakGoalRow = {
+          id: `goal-${++nextId}`,
+          daysRewarded: 0,
+          createdAt: new Date(),
+          ...data,
+        };
+        streakGoals.push(row);
+        return Promise.resolve({ ...row });
+      },
+      // Oldest first, as ORDER BY "createdAt".
+      findMany: ({ where }: { where: { userId: string } }) =>
+        Promise.resolve(
+          streakGoals
+            .filter((g) => g.userId === where.userId)
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+            .map((g) => ({ ...g })),
+        ),
+      findFirst: ({ where }: { where: StreakGoalWhere }) => {
+        const goal = streakGoals.find((g) => matchesGoal(g, where));
+        return Promise.resolve(goal ? { ...goal } : null);
+      },
+      updateMany: ({
+        where,
+        data,
+      }: {
+        where: StreakGoalWhere;
+        data: Partial<StreakGoalRow>;
+      }) => {
+        const matching = streakGoals.filter((g) => matchesGoal(g, where));
+        matching.forEach((g) => Object.assign(g, data));
+        return Promise.resolve({ count: matching.length });
+      },
+      deleteMany: ({ where }: { where: StreakGoalWhere }) => {
+        const matching = streakGoals.filter((g) => matchesGoal(g, where));
+        for (const goal of matching) {
+          streakGoals.splice(streakGoals.indexOf(goal), 1);
+          // Foreign key: closed attempts cascade with their goal.
+          for (let i = streakAttempts.length - 1; i >= 0; i--) {
+            if (streakAttempts[i].goalId === goal.id) {
+              streakAttempts.splice(i, 1);
+            }
+          }
+        }
+        return Promise.resolve({ count: matching.length });
+      },
+    },
+    streakAttempt: {
+      create: ({ data }: { data: Omit<StreakAttemptRow, 'id'> }) => {
+        const row: StreakAttemptRow = { id: `attempt-${++nextId}`, ...data };
+        streakAttempts.push(row);
+        return Promise.resolve({ ...row });
+      },
+      // Like GROUP BY "goalId" with MAX("durationSec") and COUNT(*); a goal
+      // with no attempts has no row at all.
+      groupBy: ({ where }: { where: { goalId: { in: string[] } } }) => {
+        const goalIds = where.goalId.in.filter((id) =>
+          streakAttempts.some((a) => a.goalId === id),
+        );
+        return Promise.resolve(
+          goalIds.map((goalId) => {
+            const closed = streakAttempts.filter((a) => a.goalId === goalId);
+            return {
+              goalId,
+              _max: {
+                durationSec: Math.max(...closed.map((a) => a.durationSec)),
+              },
+              _count: { _all: closed.length },
+            };
+          }),
+        );
+      },
+    },
     $transaction: <T>(run: (tx: unknown) => Promise<T>) => run(prisma),
   };
 
@@ -364,6 +484,8 @@ export function createFakePrisma() {
     xpEvents,
     completedPeriods,
     userBadges,
+    streakGoals,
+    streakAttempts,
     user,
   };
 }

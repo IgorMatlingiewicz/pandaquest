@@ -6,9 +6,17 @@ import { AuthModule } from './auth/auth.module';
 import { CategoryModule } from './category/category.module';
 import { TaskModule } from './task/task.module';
 import { BadgesModule } from './badges/badges.module';
+import { StreakGoalsModule } from './streak-goals/streak-goals.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, CategoryModule, TaskModule, BadgesModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    CategoryModule,
+    TaskModule,
+    BadgesModule,
+    StreakGoalsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

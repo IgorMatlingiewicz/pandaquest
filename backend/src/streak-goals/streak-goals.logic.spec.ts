@@ -1,8 +1,10 @@
 import {
   attemptDurationSec,
   fullDaysElapsed,
+  goalView,
   longestRunning,
   milestoneMoment,
+  NO_CLOSED_ATTEMPTS,
   payableDays,
   recordSec,
 } from './streak-goals.logic';
@@ -165,5 +167,40 @@ describe('recordSec', () => {
 
   it('moves up as soon as the current attempt is longer', () => {
     expect(recordSec(900, 901)).toBe(901);
+  });
+});
+
+describe('goalView', () => {
+  const goal = { id: 'goal-1', name: 'Papierosy', startedAt: START };
+
+  it('derives the days and the record from the running attempt', () => {
+    const view = goalView(goal, NO_CLOSED_ATTEMPTS, afterStart(DAY));
+
+    expect(view).toEqual({
+      id: 'goal-1',
+      name: 'Papierosy',
+      startedAt: START,
+      fullDays: 1,
+      recordSec: 86_400,
+      relapseCount: 0,
+    });
+  });
+
+  it('keeps the record of a closed attempt longer than the current one', () => {
+    const closed = { longestSec: 900_000, count: 3 };
+
+    expect(goalView(goal, closed, afterStart(DAY))).toMatchObject({
+      recordSec: 900_000,
+      relapseCount: 3,
+    });
+  });
+
+  it('shows only the fields the client needs', () => {
+    const row = { ...goal, userId: 'user-1', daysRewarded: 4 };
+
+    const view = goalView(row, NO_CLOSED_ATTEMPTS, START);
+
+    expect(view).not.toHaveProperty('userId');
+    expect(view).not.toHaveProperty('daysRewarded');
   });
 });

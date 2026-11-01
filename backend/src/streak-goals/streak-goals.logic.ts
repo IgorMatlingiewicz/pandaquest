@@ -58,3 +58,31 @@ export function recordSec(
 ): number {
   return Math.max(longestClosedSec ?? 0, currentSec);
 }
+
+/** What the closed attempts of one goal add up to. */
+export type ClosedAttempts = { longestSec: number | null; count: number };
+
+export const NO_CLOSED_ATTEMPTS: ClosedAttempts = {
+  longestSec: null,
+  count: 0,
+};
+
+/**
+ * A goal as the client sees it. Lists the fields one by one, so that
+ * userId and daysRewarded do not leave the server.
+ */
+export function goalView(
+  goal: { id: string; name: string; startedAt: Date },
+  closed: ClosedAttempts,
+  now: Date,
+) {
+  const { id, name, startedAt } = goal;
+  return {
+    id,
+    name,
+    startedAt,
+    fullDays: fullDaysElapsed(startedAt, now),
+    recordSec: recordSec(closed.longestSec, attemptDurationSec(startedAt, now)),
+    relapseCount: closed.count,
+  };
+}

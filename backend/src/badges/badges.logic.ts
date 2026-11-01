@@ -49,6 +49,15 @@ export function newlyEarned(
   return awards;
 }
 
+/** The threshold of an awarded tier; awards always come from the catalog. */
+export function tierThreshold(
+  award: { key: string; tier: BadgeTier },
+  catalog: readonly BadgeDefinition[] = BADGES,
+): number {
+  const badge = catalog.find((b) => b.key === award.key)!;
+  return badge.tiers.find((rule) => rule.tier === award.tier)!.threshold;
+}
+
 /**
  * Completed periods in a row, counted back from the current one if it is
  * completed, otherwise from the previous one: an open period does not break

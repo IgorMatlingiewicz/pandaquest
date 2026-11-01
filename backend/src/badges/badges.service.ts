@@ -14,6 +14,11 @@ import {
 } from '../common/full-period';
 import { getPeriodKey, getPeriodStart } from '../common/period';
 import { addXp } from '../xp/add-xp';
+import {
+  fullDaysElapsed,
+  longestRunning,
+  milestoneMoment,
+} from '../streak-goals/streak-goals.logic';
 import { LIFETIME_PERIOD_KEY } from '../xp/xp.config';
 import { CYCLE_METRICS } from './badges.config';
 import {
@@ -22,6 +27,7 @@ import {
   metricCap,
   newlyEarned,
   taskEventMetrics,
+  tierThreshold,
   type Achievement,
   type BadgeAward,
   type Metrics,
@@ -54,6 +60,11 @@ export class BadgesService {
       throw new NotFoundException('Użytkownik nie znaleziony');
     }
     const clock = { now: new Date(), timezone: user.timezone };
+    const goals = await this.prisma.streakGoal.findMany({
+      where: { userId },
+      select: { startedAt: true },
+    });
+    const longest = longestRunning(goals);
 
     const metrics: Metrics = {
       ...(await this.periodMetrics(this.prisma, userId, TaskType.DAILY, clock)),
@@ -64,6 +75,9 @@ export class BadgesService {
         clock,
       )),
       ownCategoryCount: await this.ownCategoryCount(this.prisma, userId),
+      streakGoalDays: longest
+        ? fullDaysElapsed(longest.startedAt, clock.now)
+        : 0,
     };
     const earned = await this.prisma.userBadge.findMany({
       where: { userId },
@@ -83,7 +97,7 @@ export class BadgesService {
       ...(await this.periodMetrics(tx, userId, task.type, clock)),
       ...(await this.eventMetrics(tx, userId, task, clock)),
     };
-    return this.award(tx, userId, metrics, clock.now);
+    return this.award(tx, userId, metrics, () => clock.now);
   }
 
   /** After the user created a category. */
@@ -93,7 +107,28 @@ export class BadgesService {
     now: Date,
   ): Promise<BadgeAward[]> {
     const ownCategoryCount = await this.ownCategoryCount(tx, userId);
-    return this.award(tx, userId, { ownCategoryCount }, now);
+    return this.award(tx, userId, { ownCategoryCount }, () => now);
+  }
+
+  /**
+   * After streak goals were synced, or before an attempt is closed: `goals`
+   * have to show the attempts as they ran up to `now`. A tier may have been
+   * reached long before anyone looked, so it is dated by that moment, not by
+   * when it was noticed.
+   */
+  async onStreakGoalsChecked(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    goals: readonly { startedAt: Date }[],
+    now: Date,
+  ): Promise<BadgeAward[]> {
+    const longest = longestRunning(goals);
+    if (!longest) return [];
+
+    const streakGoalDays = fullDaysElapsed(longest.startedAt, now);
+    return this.award(tx, userId, { streakGoalDays }, (award) =>
+      milestoneMoment(longest.startedAt, tierThreshold(award)),
+    );
   }
 
   /** The user's own categories that exist now; the defaults do not count. */
@@ -201,7 +236,7 @@ export class BadgesService {
     tx: Prisma.TransactionClient,
     userId: string,
     metrics: Metrics,
-    now: Date,
+    earnedAt: (award: BadgeAward) => Date,
   ): Promise<BadgeAward[]> {
     const earned = await tx.userBadge.findMany({
       where: { userId },
@@ -218,7 +253,7 @@ export class BadgesService {
         userId,
         badgeKey: c.key,
         tier: c.tier,
-        earnedAt: now,
+        earnedAt: earnedAt(c),
       })),
       skipDuplicates: true,
       select: { badgeKey: true, tier: true },

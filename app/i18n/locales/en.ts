@@ -111,6 +111,7 @@ const en: typeof pl = {
       own_category_first_task: "My own way",
       own_category_all_done: "Full set",
       many_categories: "A lot on my plate",
+      streak_days: "Perseverance",
     },
     // English only uses _one and _other; _few and _many exist because both
     // languages share one shape (typeof pl) and are never picked here.
@@ -142,6 +143,10 @@ const en: typeof pl = {
       many_categories_few: "Have {{count}} categories of your own",
       many_categories_many: "Have {{count}} categories of your own",
       many_categories_other: "Have {{count}} categories of your own",
+      streak_days_one: "Keep one quit streak going for {{count}} day",
+      streak_days_few: "Keep one quit streak going for {{count}} days",
+      streak_days_many: "Keep one quit streak going for {{count}} days",
+      streak_days_other: "Keep one quit streak going for {{count}} days",
     },
   },
   achievements: {

@@ -5,6 +5,7 @@ import {
   metricCap,
   newlyEarned,
   taskEventMetrics,
+  tierThreshold,
 } from './badges.logic';
 
 // A small catalog of its own, so these tests do not change when the real
@@ -38,6 +39,17 @@ const CATALOG: BadgeDefinition[] = [
     tiers: [{ tier: 'DIAMOND', threshold: 1, xp: 7 }],
   },
 ];
+
+describe('tierThreshold', () => {
+  it('is the threshold of that tier of that badge', () => {
+    expect(tierThreshold({ key: 'streak', tier: 'SILVER' }, CATALOG)).toBe(5);
+    expect(tierThreshold({ key: 'total', tier: 'SILVER' }, CATALOG)).toBe(4);
+  });
+
+  it('reads the real catalog by default', () => {
+    expect(tierThreshold({ key: 'streak_days', tier: 'GOLD' })).toBe(100);
+  });
+});
 
 describe('newlyEarned', () => {
   // Just the (key, tier) pairs, in the order they were returned.
