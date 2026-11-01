@@ -31,5 +31,8 @@ export const STREAK_RULES: Partial<Record<TaskType, StreakRule>> = {
   WEEKLY: { step: 0.25, maxMultiplier: 2.0, lookback: 4 },
 };
 
+/** XP for each full day of a streak goal, without a streak multiplier. */
+export const STREAK_GOAL_DAY_XP = 5;
+
 /** XpEvent.periodKey for types awarded once per task lifetime. */
 export const LIFETIME_PERIOD_KEY = 'LIFETIME';

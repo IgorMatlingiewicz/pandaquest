@@ -29,6 +29,7 @@ model User {
   xpEvents XpEvent[]
   badges UserBadge[]
   completedPeriods CompletedPeriod[]
+  streakGoals StreakGoal[]
   @@map("users")
 }
 
@@ -134,24 +135,27 @@ model TaskCompletion {
 enum XpSource {
   TASK
   BADGE
+  STREAK_GOAL
 }
 
 // One row per XP award. For TASK rows the unique key is the database-level
-// guard against awarding the same task twice in one period. BADGE rows have
-// a null taskId, and Postgres treats NULLs as distinct in a unique index, so
-// this key never rejects them: the guard for badges is the unique key on
-// UserBadge, inserted in the same transaction before the XP is written.
+// guard against awarding the same task twice in one period. BADGE and
+// STREAK_GOAL rows have a null taskId, and Postgres treats NULLs as distinct
+// in a unique index, so this key never rejects them. Their guards are the
+// unique key on UserBadge and the daysRewarded mark on StreakGoal, both
+// changed in the same transaction before the XP is written.
 model XpEvent {
   id         String   @id @default(uuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // The default keeps the rows written before badges existed valid.
   source     XpSource @default(TASK)
-  // Null once the task is deleted (the XP stays earned) and for BADGE rows.
+  // Null once the task is deleted (the XP stays earned) and for rows that
+  // do not come from a task.
   taskId     String?
   task       Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
   // 'yyyy-MM-dd' (DAILY), 'yyyy-Www' (WEEKLY) or 'LIFETIME' (LIFE,
-  // SIDE_QUEST and badges).
+  // SIDE_QUEST, badges and streak goals).
   periodKey  String
   baseXp     Int
   multiplier Float
@@ -211,4 +215,43 @@ model CompletedPeriod {
   // (userId, cycleType = ? ORDER BY periodKey DESC LIMIT n) without a sort.
   @@unique([userId, cycleType, periodKey])
   @@map("completed_periods")
+}
+
+// A "days without X" goal. Its current attempt lives in this row: it runs
+// from startedAt until now. Times are instants set by the server, so time
+// zones and daylight saving do not change how long an attempt is.
+//
+// The name can reveal health matters and is stored unencrypted, a known
+// limit: it is private to the user and must never be logged.
+model StreakGoal {
+  id           String          @id @default(uuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  startedAt    DateTime        @db.Timestamptz(3)
+  // How many full days of the current attempt have been paid in XP. Stored,
+  // although days can be derived from startedAt, because it records a
+  // payment: the guard against paying the same day twice.
+  daysRewarded Int             @default(0)
+  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  attempts     StreakAttempt[]
+
+  @@index([userId])
+  @@map("streak_goals")
+}
+
+// A closed attempt of a goal, written when the user slips. Deleted with the
+// goal; badges and XP are separate rows, so they stay.
+model StreakAttempt {
+  id          String     @id @default(uuid())
+  goalId      String
+  goal        StreakGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  startedAt   DateTime   @db.Timestamptz(3)
+  endedAt     DateTime   @db.Timestamptz(3)
+  durationSec Int
+
+  // Postgres does not index foreign keys on its own; the record and slip
+  // counts are grouped by this column.
+  @@index([goalId])
+  @@map("streak_attempts")
 }
