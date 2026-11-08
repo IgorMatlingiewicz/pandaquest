@@ -170,6 +170,7 @@ describe('TaskService', () => {
           baseXp: 10,
           multiplier: 1,
           amount: 10,
+          createdAt: expect.any(Date) as Date,
         },
       ]);
       expect(user.xpTotal).toBe(10);

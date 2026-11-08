@@ -58,6 +58,8 @@ export type XpEventRow = {
   baseXp: number;
   multiplier: number;
   amount: number;
+  // Left out by the services: the column defaults to now().
+  createdAt?: Date;
 };
 
 export type CompletedPeriodRow = {
@@ -143,6 +145,10 @@ type UpdateManyArgs = {
 };
 
 type PeriodWhere = { where: { userId: string; cycleType: CycleType } };
+
+type FindXpEventsArgs = {
+  where: { userId: string; createdAt: { gte: Date } };
+};
 
 export function createFakePrisma() {
   const tasks: TaskRow[] = [];
@@ -342,9 +348,29 @@ export function createFakePrisma() {
               (e) => e.taskId === row.taskId && e.periodKey === row.periodKey,
             ),
         );
-        xpEvents.push(...fresh);
+        xpEvents.push(
+          ...fresh.map((row) => ({
+            ...row,
+            createdAt: row.createdAt ?? new Date(),
+          })),
+        );
         return Promise.resolve({ count: fresh.length });
       },
+      // Only the fields the statistics read, source with its column default.
+      findMany: ({ where }: FindXpEventsArgs) =>
+        Promise.resolve(
+          xpEvents
+            .filter(
+              (e) =>
+                e.userId === where.userId &&
+                e.createdAt!.getTime() >= where.createdAt.gte.getTime(),
+            )
+            .map((e) => ({
+              createdAt: e.createdAt!,
+              amount: e.amount,
+              source: e.source ?? 'TASK',
+            })),
+        ),
     },
     completedPeriod: {
       // Like the unique (userId, cycleType, periodKey) index with
@@ -363,8 +389,8 @@ export function createFakePrisma() {
         return Promise.resolve({ count: fresh.length });
       },
       count: (args: PeriodWhere) => Promise.resolve(periodsOf(args).length),
-      // Newest first, as ORDER BY "periodKey" DESC LIMIT take.
-      findMany: (args: PeriodWhere & { take: number }) =>
+      // Newest first, as ORDER BY "periodKey" DESC LIMIT take; all without take.
+      findMany: (args: PeriodWhere & { take?: number }) =>
         Promise.resolve(
           periodsOf(args)
             .map((p) => ({ periodKey: p.periodKey }))

@@ -94,6 +94,7 @@ describe('BadgesService', () => {
           baseXp: 150,
           multiplier: 1,
           amount: 150,
+          createdAt: expect.any(Date) as Date,
         },
       ]);
       expect(fake.user).toMatchObject({ xpTotal: 150, level: 2 });

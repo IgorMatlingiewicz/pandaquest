@@ -7,6 +7,7 @@ import { CategoryModule } from './category/category.module';
 import { TaskModule } from './task/task.module';
 import { BadgesModule } from './badges/badges.module';
 import { StreakGoalsModule } from './streak-goals/streak-goals.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { StreakGoalsModule } from './streak-goals/streak-goals.module';
     TaskModule,
     BadgesModule,
     StreakGoalsModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
