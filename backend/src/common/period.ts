@@ -72,25 +72,40 @@ export function getPeriodStart(
 }
 
 /**
- * The `count` periods right before the one containing `now`, newest first.
+ * The periods before the one containing `now`, newest first, without end.
+ * Lazy: each period is worked out only when the caller asks for the next
+ * one, so a caller that stops early pays only for what it read.
  * Steps back to "1 ms before the current start" instead of subtracting
  * 24 h or 7 days, so 23- and 25-hour DST days need no special case.
  */
+export function* periodsBefore(
+  type: TaskType,
+  now: Date,
+  timezone: string,
+): Generator<Period> {
+  if (type !== 'DAILY' && type !== 'WEEKLY') return;
+
+  // Non-null: the type is cyclic, checked above.
+  let start = getPeriodStart(type, now, timezone)!;
+  for (;;) {
+    const inPrevious = new Date(start.getTime() - 1);
+    start = getPeriodStart(type, inPrevious, timezone)!;
+    yield { key: getPeriodKey(type, inPrevious, timezone)!, start };
+  }
+}
+
+/** The `count` periods right before the one containing `now`, newest first. */
 export function getPreviousPeriods(
   type: TaskType,
   now: Date,
   timezone: string,
   count: number,
 ): Period[] {
-  if (type !== 'DAILY' && type !== 'WEEKLY') return [];
-
   const periods: Period[] = [];
-  // Non-null: the type is cyclic, checked above.
-  let start = getPeriodStart(type, now, timezone)!;
-  for (let i = 0; i < count; i++) {
-    const inPrevious = new Date(start.getTime() - 1);
-    start = getPeriodStart(type, inPrevious, timezone)!;
-    periods.push({ key: getPeriodKey(type, inPrevious, timezone)!, start });
+  if (count <= 0) return periods;
+  for (const period of periodsBefore(type, now, timezone)) {
+    periods.push(period);
+    if (periods.length === count) break;
   }
   return periods;
 }

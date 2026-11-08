@@ -1,3 +1,4 @@
+import * as period from '../common/period';
 import { BADGE_XP, BADGES, type BadgeDefinition } from './badges.config';
 import {
   buildAchievements,
@@ -160,6 +161,32 @@ describe('currentStreak', () => {
     );
     expect(daily(tenDays, FRIDAY, 5)).toBe(5);
     expect(daily(tenDays.slice(1), FRIDAY, 5)).toBe(5);
+  });
+
+  it('stops at the first gap instead of walking up to the limit', () => {
+    // Counts the periods actually taken from periodsBefore. A timeout cannot
+    // catch this: a synchronous loop is not interrupted by Jest.
+    const realPeriodsBefore = period.periodsBefore;
+    let taken = 0;
+    const spy = jest
+      .spyOn(period, 'periodsBefore')
+      .mockImplementation(function* (...args) {
+        for (const p of realPeriodsBefore(...args)) {
+          taken++;
+          yield p;
+        }
+      });
+
+    const streak = daily(['2026-10-09', '2026-10-08'], FRIDAY, 365);
+    spy.mockRestore();
+
+    expect(streak).toBe(2);
+    // Yesterday, then the gap on 7 October: two periods, not 365.
+    expect(taken).toBe(2);
+  });
+
+  it('counts nothing with a limit of 0', () => {
+    expect(daily(['2026-10-09', '2026-10-08'], FRIDAY, 0)).toBe(0);
   });
 
   it('counts the days across New Year', () => {

@@ -3,7 +3,7 @@ import type {
   CycleType,
   TaskType,
 } from '../generated/prisma/client';
-import { getPeriodKey, getPreviousPeriods } from '../common/period';
+import { getPeriodKey, periodsBefore } from '../common/period';
 import {
   BADGES,
   isEventMetric,
@@ -62,6 +62,9 @@ export function tierThreshold(
  * Completed periods in a row, counted back from the current one if it is
  * completed, otherwise from the previous one: an open period does not break
  * the streak until it is over. Counts at most `limit` periods.
+ *
+ * Walks back one period at a time and stops at the first gap, so the work
+ * follows the length of the streak, not the length of the history.
  */
 export function currentStreak(
   completedKeys: readonly string[],
@@ -74,14 +77,14 @@ export function currentStreak(
   // Non-null: DAILY and WEEKLY always have a period key.
   const current = getPeriodKey(cycle, now, timezone)!;
 
-  const candidates = [
-    ...(completed.has(current) ? [current] : []),
-    ...getPreviousPeriods(cycle, now, timezone, limit).map((p) => p.key),
-  ].slice(0, limit);
+  function* candidates() {
+    if (completed.has(current)) yield current;
+    for (const period of periodsBefore(cycle, now, timezone)) yield period.key;
+  }
 
   let streak = 0;
-  for (const key of candidates) {
-    if (!completed.has(key)) break;
+  for (const key of candidates()) {
+    if (streak >= limit || !completed.has(key)) break;
     streak++;
   }
   return streak;

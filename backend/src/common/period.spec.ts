@@ -4,6 +4,7 @@ import {
   getPeriodKey,
   getPeriodStart,
   getPreviousPeriods,
+  periodsBefore,
 } from './period';
 
 const WARSAW = 'Europe/Warsaw';
@@ -293,6 +294,49 @@ describe('getPreviousPeriods', () => {
     expect(list('DAILY', '2026-03-30T12:00:00Z', 2)).toEqual([
       ['2026-03-29', '2026-03-28T23:00:00.000Z'],
       ['2026-03-28', '2026-03-27T23:00:00.000Z'],
+    ]);
+  });
+
+  it('returns nothing for a count of 0', () => {
+    expect(list('DAILY', '2026-10-05T12:00:00Z', 0)).toEqual([]);
+  });
+});
+
+describe('periodsBefore', () => {
+  const take = (periods: Iterable<{ key: string }>, count: number) => {
+    const keys: string[] = [];
+    for (const period of periods) {
+      if (keys.length === count) break;
+      keys.push(period.key);
+    }
+    return keys;
+  };
+
+  it('yields nothing for non-cyclic types', () => {
+    const now = new Date('2026-10-05T12:00:00Z');
+    expect(take(periodsBefore('SIDE_QUEST', now, WARSAW), 3)).toEqual([]);
+  });
+
+  it.each<[TaskType, string]>([
+    ['DAILY', '2026-03-30T12:00:00Z'],
+    ['WEEKLY', '2027-01-06T12:00:00Z'],
+  ])('yields the same %s periods as getPreviousPeriods', (type, at) => {
+    const now = new Date(at);
+    const yielded: { key: string; start: Date }[] = [];
+    for (const period of periodsBefore(type, now, WARSAW)) {
+      yielded.push(period);
+      if (yielded.length === 10) break;
+    }
+
+    expect(yielded).toEqual(getPreviousPeriods(type, now, WARSAW, 10));
+  });
+
+  it('works one period at a time, with no end of its own', () => {
+    const now = new Date('2026-10-05T12:00:00Z');
+
+    expect(take(periodsBefore('DAILY', now, WARSAW), 2)).toEqual([
+      '2026-10-04',
+      '2026-10-03',
     ]);
   });
 });
