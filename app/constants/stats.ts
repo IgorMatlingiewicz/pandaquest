@@ -15,3 +15,5 @@ export const MONTH_LABEL_WIDTH = 28;
 // Weekly XP bars, in px. A week with any XP is never thinner than the minimum.
 export const BAR_MAX_HEIGHT = 140;
 export const BAR_MIN_HEIGHT = 4;
+// On a wide screen the bars stop growing sideways here.
+export const BAR_MAX_WIDTH = 48;
