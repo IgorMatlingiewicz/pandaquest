@@ -35,6 +35,19 @@ const NAMED_ROWS: Record<number, string> = {
 const LABEL_TEXT = { fontSize: 10 };
 const LEGEND_SQUARE = 12;
 
+// The mark of a full day: a dot in the text colour with a thin outline in the
+// background colour, so it shows on every shade of the scale, in both themes.
+// The selection is a ring, so the two never look alike.
+function FullDayDot({ squareSize }: { squareSize: number }) {
+  const size = Math.max(4, Math.round(squareSize * 0.4));
+  return (
+    <View
+      className="rounded-full bg-foreground border-background"
+      style={{ width: size, height: size, borderWidth: 1 }}
+    />
+  );
+}
+
 type Props = {
   days: ActivityDay[];
   weeks: number;
@@ -65,13 +78,6 @@ export function ActivityCalendar({ days, weeks, selected, onSelect }: Props) {
   // a new type on every render, and React would remount all the squares.
   function renderSquare(cell: ActivityCell) {
     const isSelected = cell.date === selected;
-    // The selection wins over the full-day ring; the details line below
-    // still says the day was full.
-    const ring = isSelected
-      ? "border-foreground"
-      : cell.fullDay
-        ? "border-highlight"
-        : "";
     return (
       <Pressable
         key={cell.date}
@@ -83,13 +89,13 @@ export function ActivityCalendar({ days, weeks, selected, onSelect }: Props) {
           ["stats.activity.cell", "stats.activity.cellFullDay"],
           format.longDate(cell.date),
         )}
-        className={`rounded-sm ${LEVEL_CLASS[cell.level]} ${ring}`}
-        style={{
-          width: size,
-          height: size,
-          borderWidth: isSelected || cell.fullDay ? 2 : 0,
-        }}
-      />
+        className={`items-center justify-center rounded-sm ${
+          LEVEL_CLASS[cell.level]
+        } ${isSelected ? "border-foreground" : ""}`}
+        style={{ width: size, height: size, borderWidth: isSelected ? 2 : 0 }}
+      >
+        {cell.fullDay && <FullDayDot squareSize={size} />}
+      </Pressable>
     );
   }
 
@@ -138,13 +144,11 @@ export function ActivityCalendar({ days, weeks, selected, onSelect }: Props) {
           <View className="mt-3 flex-row flex-wrap items-center justify-between gap-2">
             <View className="flex-row items-center gap-1.5">
               <View
-                className="rounded-sm bg-activity-0 border-highlight"
-                style={{
-                  width: LEGEND_SQUARE,
-                  height: LEGEND_SQUARE,
-                  borderWidth: 2,
-                }}
-              />
+                className="items-center justify-center rounded-sm bg-activity-2"
+                style={{ width: LEGEND_SQUARE, height: LEGEND_SQUARE }}
+              >
+                <FullDayDot squareSize={LEGEND_SQUARE} />
+              </View>
               <Text size="xs" className="text-muted-foreground">
                 {t("stats.activity.fullDay")}
               </Text>
