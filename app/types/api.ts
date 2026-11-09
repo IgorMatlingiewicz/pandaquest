@@ -65,3 +65,31 @@ export type StreakGoalsResponse = {
   rules: StreakGoalRules;
   goals: StreakGoal[];
 };
+
+// One day of GET /stats, in the user's timezone; date is 'yyyy-MM-dd'.
+export type ActivityDay = {
+  date: string;
+  completions: number;
+  fullDay: boolean;
+};
+
+// weekKey is 'yyyy-Www', weekStart the Monday as 'yyyy-MM-dd'.
+export type WeekXp = { weekKey: string; weekStart: string; xp: number };
+
+export type StatsSummary = {
+  fullDaysTotal: number;
+  currentStreak: number;
+  longestStreak: number;
+  xpThisMonth: number;
+  completionsThisMonth: number;
+};
+
+// GET /stats. activity.days runs without gaps from a Monday to today, 26
+// ISO weeks in all; weeklyXp has 8 weeks, the current one last.
+export type StatsResponse = {
+  serverNow: string;
+  timezone: string;
+  activity: { days: ActivityDay[] };
+  weeklyXp: WeekXp[];
+  summary: StatsSummary;
+};
