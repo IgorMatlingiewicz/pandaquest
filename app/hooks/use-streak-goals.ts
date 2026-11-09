@@ -3,28 +3,18 @@ import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useRewards } from "@/context/RewardsContext";
 import { createStreakGoalErrorKey } from "@/lib/api-errors";
+import { failureKey, HttpError } from "@/lib/http-error";
 import { clockOffset, crossedFullDay } from "@/lib/streak-goals";
 import {
   createStreakGoal,
   deleteStreakGoal,
   fetchStreakGoals,
-  HttpError,
   relapseStreakGoal,
   syncStreakGoals,
 } from "@/lib/streak-goals-api";
 import type { StreakGoal, StreakGoalRules } from "@/types/api";
 
 const TICK_MS = 1000;
-
-/** What a failed request means, as a translation key. */
-function failureKey(
-  error: unknown,
-  keyOf: (status: number) => string = () => "common.tryAgain",
-): string {
-  return error instanceof HttpError
-    ? keyOf(error.status)
-    : "common.noConnection";
-}
 
 /**
  * Asks the server to pay the full days not paid yet and shows what it earned.

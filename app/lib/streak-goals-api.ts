@@ -1,19 +1,10 @@
 import { API_URL } from "@/constants/api";
+import { HttpError } from "@/lib/http-error";
 import type {
   RewardOutcome,
   StreakGoal,
   StreakGoalsResponse,
 } from "@/types/api";
-
-/** The server answered and refused; fetch itself rejects with no answer. */
-export class HttpError extends Error {
-  status: number;
-
-  constructor(status: number) {
-    super(`HTTP ${status}`);
-    this.status = status;
-  }
-}
 
 async function send(token: string, path: string, init: RequestInit = {}) {
   const response = await fetch(`${API_URL}/streak-goals${path}`, {

@@ -234,6 +234,10 @@ export default {
       streak_days_other: "Wytrwaj {{count}} dnia w jednym ciągu",
     },
   },
+  stats: {
+    loadError: "Nie udało się wczytać statystyk.",
+    sessionExpired: "Sesja wygasła. Zaloguj się ponownie.",
+  },
   achievements: {
     summary: "Zdobyte odznaki: {{earned}} z {{total}}",
     progress: "{{current}} / {{target}}",

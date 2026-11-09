@@ -234,6 +234,10 @@ const en: typeof pl = {
       streak_days_other: "Keep one quit streak going for {{count}} days",
     },
   },
+  stats: {
+    loadError: "Couldn't load your statistics.",
+    sessionExpired: "Your session has expired. Please log in again.",
+  },
   achievements: {
     summary: "Badges earned: {{earned}} of {{total}}",
     progress: "{{current}} / {{target}}",

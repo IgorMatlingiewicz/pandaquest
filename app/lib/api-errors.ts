@@ -28,6 +28,11 @@ export function deleteCategoryErrorKey(status: number): string {
   return "common.tryAgain";
 }
 
+/** 401: the stored session is no longer valid, so retrying will not help. */
+export function statsErrorKey(status: number): string {
+  return status === 401 ? "stats.sessionExpired" : "stats.loadError";
+}
+
 export function createStreakGoalErrorKey(status: number): string {
   if (status === 400) return "streaks.invalidName";
   if (status === 409) return "streaks.limitReached";

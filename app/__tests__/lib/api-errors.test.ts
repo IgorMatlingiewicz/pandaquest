@@ -3,6 +3,7 @@ import {
   deleteCategoryErrorKey,
   loginErrorKey,
   registerErrorKey,
+  statsErrorKey,
 } from "@/lib/api-errors";
 
 describe("loginErrorKey", () => {
@@ -34,6 +35,16 @@ describe("deleteCategoryErrorKey", () => {
     [500, "common.tryAgain"],
   ])("maps %i to %s", (status, key) => {
     expect(deleteCategoryErrorKey(status)).toBe(key);
+  });
+});
+
+describe("statsErrorKey", () => {
+  it.each([
+    [401, "stats.sessionExpired"],
+    [404, "stats.loadError"],
+    [500, "stats.loadError"],
+  ])("maps %i to %s", (status, key) => {
+    expect(statsErrorKey(status)).toBe(key);
   });
 });
 
