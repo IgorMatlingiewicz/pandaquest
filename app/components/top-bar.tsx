@@ -34,8 +34,8 @@ function NavLinks() {
       <TabTrigger name="streaks" asChild>
         <NavItem label={t("nav.streaks")} icon="timer-outline" />
       </TabTrigger>
-      <TabTrigger name="achievements" asChild>
-        <NavItem label={t("nav.achievements")} icon="trophy-outline" />
+      <TabTrigger name="progress" asChild>
+        <NavItem label={t("nav.progress")} icon="chart-box-outline" />
       </TabTrigger>
     </>
   );

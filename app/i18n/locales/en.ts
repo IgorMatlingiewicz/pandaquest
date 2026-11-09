@@ -15,7 +15,7 @@ const en: typeof pl = {
   nav: {
     home: "Home",
     streaks: "Quit streaks",
-    achievements: "Achievements",
+    progress: "Progress",
     menu: "Menu",
   },
   auth: {
@@ -233,6 +233,9 @@ const en: typeof pl = {
       streak_days_many: "Keep one quit streak going for {{count}} days",
       streak_days_other: "Keep one quit streak going for {{count}} days",
     },
+  },
+  progress: {
+    tabs: { stats: "Statistics", achievements: "Achievements" },
   },
   stats: {
     loadError: "Couldn't load your statistics.",

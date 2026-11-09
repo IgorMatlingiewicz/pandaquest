@@ -11,7 +11,9 @@ import { API_URL } from "@/constants/api";
 import { useIsWide } from "@/hooks/use-is-wide";
 import type { Achievement } from "@/types/api";
 
-export default function AchievementsScreen() {
+// The Achievements tab of the Progress screen; until the statistics came, it
+// was a page of its own, and it behaves exactly as that page did.
+export function AchievementsPanel() {
   const { token } = useAuth();
   const { t } = useTranslation();
   const isWide = useIsWide();

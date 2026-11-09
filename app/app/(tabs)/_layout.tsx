@@ -26,7 +26,7 @@ export default function TabLayout() {
       <TabList style={{ display: "none" }}>
         <TabTrigger name="index" href="/" />
         <TabTrigger name="streaks" href="/streaks" />
-        <TabTrigger name="achievements" href="/achievements" />
+        <TabTrigger name="progress" href="/progress" />
       </TabList>
     </Tabs>
   );

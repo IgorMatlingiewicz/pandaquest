@@ -13,7 +13,7 @@ export default {
   nav: {
     home: "Strona główna",
     streaks: "Ciągi",
-    achievements: "Osiągnięcia",
+    progress: "Postępy",
     menu: "Menu",
   },
   auth: {
@@ -233,6 +233,9 @@ export default {
       streak_days_many: "Wytrwaj {{count}} dni w jednym ciągu",
       streak_days_other: "Wytrwaj {{count}} dnia w jednym ciągu",
     },
+  },
+  progress: {
+    tabs: { stats: "Statystyki", achievements: "Osiągnięcia" },
   },
   stats: {
     loadError: "Nie udało się wczytać statystyk.",
