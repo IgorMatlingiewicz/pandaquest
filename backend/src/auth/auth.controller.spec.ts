@@ -1,3 +1,4 @@
+import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -21,6 +22,7 @@ describe('AuthController', () => {
     register: jest.fn(),
     login: jest.fn(),
     getProfile: jest.fn(),
+    changePassword: jest.fn(),
   };
   let controller: AuthController;
 
@@ -67,5 +69,27 @@ describe('AuthController', () => {
 
     await expect(controller.getMe(req)).resolves.toEqual({ id: 'user-1' });
     expect(authService.getProfile).toHaveBeenCalledWith('user-1');
+  });
+
+  it('changePassword changes the password of the authenticated user', async () => {
+    type PasswordRequest = Parameters<AuthController['changePassword']>[0];
+    const req = {
+      user: { userId: 'user-1', email: 'user@example.com' },
+    } as PasswordRequest;
+    const dto = { currentPassword: 'haslo12345', newPassword: 'nowehaslo123' };
+    authService.changePassword.mockResolvedValue(undefined);
+
+    await expect(controller.changePassword(req, dto)).resolves.toBeUndefined();
+    expect(authService.changePassword).toHaveBeenCalledWith('user-1', dto);
+  });
+
+  it('changePassword answers 204 with no body', () => {
+    // @HttpCode keeps its status on the method itself; it is read, not called.
+    const handler = Object.getOwnPropertyDescriptor(
+      AuthController.prototype,
+      'changePassword',
+    )?.value as object;
+
+    expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(204);
   });
 });

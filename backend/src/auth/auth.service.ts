@@ -1,13 +1,15 @@
 import {
   Injectable,
   ConflictException,
+  ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { hashPassword, verifyPassword } from './password';
 import { Prisma, TaskType, CompletionMode } from '../generated/prisma/client';
 import { getPeriodKey } from '../common/period';
 import { levelProgress } from '../xp/xp.logic';
@@ -92,7 +94,7 @@ export class AuthService {
       throw new ConflictException('Email już zajęty');
     }
 
-    const passwordHash = await argon2.hash(dto.password);
+    const passwordHash = await hashPassword(dto.password);
 
     const user = await this.prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
@@ -184,7 +186,7 @@ export class AuthService {
       throw new UnauthorizedException('Nieprawidłowy email lub hasło');
     }
 
-    const passwordValid = await argon2.verify(user.passwordHash, dto.password);
+    const passwordValid = await verifyPassword(user.passwordHash, dto.password);
 
     if (!passwordValid) {
       throw new UnauthorizedException('Nieprawidłowy email lub hasło');
@@ -221,5 +223,36 @@ export class AuthService {
       // Computed here so that clients never need to know the level curve.
       levelProgress: levelProgress(user.xpTotal),
     };
+  }
+
+  /**
+   * 403 for a wrong current password: 401 already means "your session is
+   * gone" to the app, which would log the user out. 409 for a new password
+   * equal to the current one, checked only once the current one is proven.
+   */
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    if (!(await verifyPassword(user.passwordHash, dto.currentPassword))) {
+      throw new ForbiddenException('Nieprawidłowe obecne hasło');
+    }
+
+    // The current password was just verified, so comparing the two texts
+    // is enough; a hash comparison would give the same answer, only slower.
+    if (dto.newPassword === dto.currentPassword) {
+      throw new ConflictException('Nowe hasło musi różnić się od obecnego');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await hashPassword(dto.newPassword) },
+    });
   }
 }

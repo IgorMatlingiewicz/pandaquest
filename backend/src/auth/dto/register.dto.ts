@@ -5,6 +5,7 @@ import {
   IsTimeZone,
   MinLength,
 } from 'class-validator';
+import { IsNewPassword } from '../password';
 
 export class RegisterDto {
   @IsEmail()
@@ -14,8 +15,7 @@ export class RegisterDto {
   @MinLength(3)
   username!: string;
 
-  @IsString()
-  @MinLength(8)
+  @IsNewPassword()
   password!: string;
 
   // IANA name, e.g. "Europe/Warsaw".

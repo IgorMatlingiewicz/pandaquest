@@ -1,4 +1,8 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { AuthService } from './auth.service';
@@ -272,6 +276,92 @@ describe('AuthService', () => {
       await expect(service.getProfile('ghost')).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+  });
+
+  describe('changePassword', () => {
+    const NEW_PASSWORD = 'nowehaslo123';
+    let user: { id: string; email: string; passwordHash: string };
+
+    beforeEach(async () => {
+      user = {
+        id: 'user-1',
+        email: 'user@example.com',
+        passwordHash: await argon2.hash(PASSWORD),
+      };
+      // One stored user that the update really changes, so a later login
+      // sees the new hash.
+      prisma.user.findUnique.mockImplementation(() =>
+        Promise.resolve({ ...user, timezone: 'Europe/Warsaw' }),
+      );
+      prisma.user.update.mockImplementation(
+        ({ data }: { data: { passwordHash: string } }) => {
+          user.passwordHash = data.passwordHash;
+          return Promise.resolve(user);
+        },
+      );
+      jwt.signAsync.mockResolvedValue('signed-token');
+    });
+
+    const change = (currentPassword: string, newPassword: string) =>
+      service.changePassword(user.id, { currentPassword, newPassword });
+
+    it('stores a hash of the new password for this user, and only theirs', async () => {
+      await change(PASSWORD, NEW_PASSWORD);
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: user.id } }),
+      );
+      expect(prisma.user.update).toHaveBeenCalledTimes(1);
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: user.id },
+        data: { passwordHash: expect.any(String) as string },
+      });
+      expect(user.passwordHash).not.toBe(NEW_PASSWORD);
+      expect(await argon2.verify(user.passwordHash, NEW_PASSWORD)).toBe(true);
+    });
+
+    it('lets the user log in with the new password and not the old one', async () => {
+      await change(PASSWORD, NEW_PASSWORD);
+
+      await expect(
+        service.login({ email: user.email, password: NEW_PASSWORD }),
+      ).resolves.toEqual({ accessToken: 'signed-token' });
+      await expect(
+        service.login({ email: user.email, password: PASSWORD }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('refuses a wrong current password with 403 and changes nothing', async () => {
+      const before = user.passwordHash;
+
+      await expect(change('wrong-password', NEW_PASSWORD)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(user.passwordHash).toBe(before);
+    });
+
+    it('refuses a new password equal to the current one with 409', async () => {
+      await expect(change(PASSWORD, PASSWORD)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('checks the current password first, so a wrong one is never a 409', async () => {
+      await expect(change('wrong-password', 'wrong-password')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('treats a user that no longer exists as an ended session', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(change(PASSWORD, NEW_PASSWORD)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
 });
