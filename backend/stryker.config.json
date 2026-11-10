@@ -19,7 +19,8 @@
     "src/badges/badges.logic.ts",
     "src/common/full-period.ts",
     "src/streak-goals/streak-goals.logic.ts",
-    "src/stats/stats.logic.ts"
+    "src/stats/stats.logic.ts",
+    "src/profile/profile.logic.ts"
   ],
   "reporters": ["clear-text", "progress", "html"],
   "htmlReporter": { "fileName": "reports/mutation/mutation.html" },

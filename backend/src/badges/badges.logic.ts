@@ -49,6 +49,25 @@ export function newlyEarned(
   return awards;
 }
 
+/**
+ * "Earned X of Y", counted as the achievements screen counts it: every tier
+ * of the catalog, and how many of them the user has. A stored tier that is no
+ * longer in the catalog counts neither way, as buildAchievements leaves it out.
+ */
+export function badgeCounts(
+  earned: readonly EarnedTier[],
+  catalog: readonly BadgeDefinition[] = BADGES,
+): { earned: number; total: number } {
+  const owned = new Set(earned.map((e) => `${e.badgeKey}|${e.tier}`));
+  const tiers = catalog.flatMap((badge) =>
+    badge.tiers.map((rule) => `${badge.key}|${rule.tier}`),
+  );
+  return {
+    earned: tiers.filter((key) => owned.has(key)).length,
+    total: tiers.length,
+  };
+}
+
 /** The threshold of an awarded tier; awards always come from the catalog. */
 export function tierThreshold(
   award: { key: string; tier: BadgeTier },

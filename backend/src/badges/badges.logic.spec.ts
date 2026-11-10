@@ -1,6 +1,7 @@
 import * as period from '../common/period';
 import { BADGE_XP, BADGES, type BadgeDefinition } from './badges.config';
 import {
+  badgeCounts,
   buildAchievements,
   currentStreak,
   metricCap,
@@ -117,6 +118,57 @@ describe('newlyEarned', () => {
   it('uses the real catalog by default', () => {
     const keys = newlyEarned({ weeklyTotal: 1 }, []).map((a) => a.key);
     expect(keys).toEqual(['first_week']);
+  });
+});
+
+describe('badgeCounts', () => {
+  const tier = (badgeKey: string, t: 'BRONZE' | 'SILVER' | 'GOLD') => ({
+    badgeKey,
+    tier: t,
+  });
+
+  it('counts every tier of the catalog, and none earned at first', () => {
+    // streak 3, first 1, total 2, goal 1, and any after it in CATALOG.
+    const total = CATALOG.reduce((sum, b) => sum + b.tiers.length, 0);
+
+    expect(badgeCounts([], CATALOG)).toEqual({ earned: 0, total });
+  });
+
+  it('counts the earned tiers, each once', () => {
+    const earned = [
+      tier('streak', 'BRONZE'),
+      tier('streak', 'SILVER'),
+      tier('first', 'BRONZE'),
+    ];
+
+    expect(badgeCounts(earned, CATALOG).earned).toBe(3);
+    expect(badgeCounts([...earned, ...earned], CATALOG).earned).toBe(3);
+  });
+
+  it('leaves out stored tiers that are no longer in the catalog', () => {
+    const earned = [
+      tier('streak', 'BRONZE'),
+      tier('retired', 'GOLD'),
+      tier('first', 'GOLD'),
+    ];
+
+    expect(badgeCounts(earned, CATALOG).earned).toBe(1);
+  });
+
+  it('agrees with counting the achievements view, as the app does', () => {
+    const earned = [
+      { ...tier('streak', 'GOLD'), earnedAt: new Date() },
+      { ...tier('total', 'BRONZE'), earnedAt: new Date() },
+      { ...tier('retired', 'GOLD'), earnedAt: new Date() },
+    ];
+    const tiers = buildAchievements({}, earned, CATALOG).flatMap(
+      (a) => a.tiers,
+    );
+
+    expect(badgeCounts(earned, CATALOG)).toEqual({
+      earned: tiers.filter((t) => t.earnedAt !== null).length,
+      total: tiers.length,
+    });
   });
 });
 

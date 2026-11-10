@@ -8,6 +8,7 @@ import { TaskModule } from './task/task.module';
 import { BadgesModule } from './badges/badges.module';
 import { StreakGoalsModule } from './streak-goals/streak-goals.module';
 import { StatsModule } from './stats/stats.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { StatsModule } from './stats/stats.module';
     BadgesModule,
     StreakGoalsModule,
     StatsModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

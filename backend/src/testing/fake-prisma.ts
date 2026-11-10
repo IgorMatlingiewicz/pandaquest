@@ -70,13 +70,27 @@ export type CompletedPeriodRow = {
 };
 
 export type UserBadgeRow = {
+  // Only rows a showcase points at need one; the badge service never reads it.
+  id?: string;
   userId: string;
   badgeKey: string;
   tier: BadgeTier;
   earnedAt: Date;
 };
 
-export type UserRow = { timezone: string; xpTotal: number; level: number };
+export type FavoriteBadgeRow = {
+  userId: string;
+  slot: number;
+  userBadgeId: string;
+};
+
+export type UserRow = {
+  username: string;
+  createdAt: Date;
+  timezone: string;
+  xpTotal: number;
+  level: number;
+};
 
 export type StreakGoalRow = {
   id: string;
@@ -150,6 +164,10 @@ type FindXpEventsArgs = {
   where: { userId: string; createdAt: { gte: Date } };
 };
 
+type FindUserBadgesArgs = {
+  where: { userId: string; OR?: { badgeKey: string; tier: BadgeTier }[] };
+};
+
 export function createFakePrisma() {
   const tasks: TaskRow[] = [];
   const categories: CategoryRow[] = [];
@@ -159,8 +177,38 @@ export function createFakePrisma() {
   const userBadges: UserBadgeRow[] = [];
   const streakGoals: StreakGoalRow[] = [];
   const streakAttempts: StreakAttemptRow[] = [];
-  const user: UserRow = { timezone: 'Europe/Warsaw', xpTotal: 0, level: 1 };
+  const favoriteBadges: FavoriteBadgeRow[] = [];
+  const user: UserRow = {
+    username: 'owner',
+    createdAt: new Date('2026-09-01T10:00:00Z'),
+    timezone: 'Europe/Warsaw',
+    xpTotal: 0,
+    level: 1,
+  };
   let nextId = 0;
+
+  /*
+   * The database rules of favorite_badges, so a service writing something
+   * the real table would refuse fails here too: the slot CHECK, both unique
+   * indexes and the composite foreign key to a badge of the same user.
+   */
+  const assertFavoriteAllowed = (row: FavoriteBadgeRow) => {
+    if (row.slot < 0 || row.slot > 2) {
+      throw new Error('favorite_badges_slot_check');
+    }
+    const owned = userBadges.some(
+      (b) => b.id === row.userBadgeId && b.userId === row.userId,
+    );
+    if (!owned) throw new Error('favorite_badges_userBadgeId_userId_fkey');
+    if (
+      favoriteBadges.some((f) => f.userId === row.userId && f.slot === row.slot)
+    ) {
+      throw new Error('favorite_badges_userId_slot_key');
+    }
+    if (favoriteBadges.some((f) => f.userBadgeId === row.userBadgeId)) {
+      throw new Error('favorite_badges_userBadgeId_key');
+    }
+  };
 
   // Dates are compared by the moment, like the columns they stand in for.
   const matchesGoal = (goal: StreakGoalRow, where: StreakGoalWhere) =>
@@ -399,8 +447,18 @@ export function createFakePrisma() {
         ),
     },
     userBadge: {
-      findMany: ({ where }: { where: { userId: string } }) =>
-        Promise.resolve(userBadges.filter((b) => b.userId === where.userId)),
+      findMany: ({ where }: FindUserBadgesArgs) =>
+        Promise.resolve(
+          userBadges.filter(
+            (b) =>
+              b.userId === where.userId &&
+              (where.OR === undefined ||
+                where.OR.some(
+                  (pick) =>
+                    pick.badgeKey === b.badgeKey && pick.tier === b.tier,
+                )),
+          ),
+        ),
       // Like INSERT ... ON CONFLICT (userId, badgeKey, tier) DO NOTHING
       // RETURNING: only the rows that went in come back.
       createManyAndReturn: ({ data }: { data: UserBadgeRow[] }) => {
@@ -499,6 +557,40 @@ export function createFakePrisma() {
         );
       },
     },
+    favoriteBadge: {
+      // Only the fields the profile reads: the slot and its badge.
+      findMany: ({ where }: { where: { userId: string } }) =>
+        Promise.resolve(
+          favoriteBadges
+            .filter((f) => f.userId === where.userId)
+            .map((f) => {
+              const badge = userBadges.find((b) => b.id === f.userBadgeId)!;
+              return {
+                slot: f.slot,
+                userBadge: {
+                  badgeKey: badge.badgeKey,
+                  tier: badge.tier,
+                  earnedAt: badge.earnedAt,
+                },
+              };
+            }),
+        ),
+      deleteMany: ({ where }: { where: { userId: string } }) => {
+        const before = favoriteBadges.length;
+        for (let i = favoriteBadges.length - 1; i >= 0; i--) {
+          if (favoriteBadges[i].userId === where.userId)
+            favoriteBadges.splice(i, 1);
+        }
+        return Promise.resolve({ count: before - favoriteBadges.length });
+      },
+      createMany: ({ data }: { data: FavoriteBadgeRow[] }) => {
+        for (const row of data) {
+          assertFavoriteAllowed(row);
+          favoriteBadges.push({ ...row });
+        }
+        return Promise.resolve({ count: data.length });
+      },
+    },
     $transaction: <T>(run: (tx: unknown) => Promise<T>) => run(prisma),
   };
 
@@ -512,6 +604,7 @@ export function createFakePrisma() {
     userBadges,
     streakGoals,
     streakAttempts,
+    favoriteBadges,
     user,
   };
 }
