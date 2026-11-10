@@ -4,14 +4,7 @@ import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
 import { API_URL } from "@/constants/api";
 import { loginErrorKey, registerErrorKey } from "@/lib/api-errors";
-
-// Computed by the backend; the app never derives a level from XP itself.
-type LevelProgress = {
-  level: number;
-  xpIntoLevel: number;
-  xpForNextLevel: number | null;
-  isMax: boolean;
-};
+import type { LevelProgress } from "@/types/api";
 
 export type User = {
   id: string;

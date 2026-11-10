@@ -43,6 +43,26 @@ export type EarnedBadge = {
 // One slot of PUT /profile/favorite-badges; null there is an empty slot.
 export type FavoritePick = { badgeKey: string; tier: BadgeTier };
 
+// Computed by the backend; the app never derives a level from XP itself.
+export type LevelProgress = {
+  level: number;
+  xpIntoLevel: number;
+  xpForNextLevel: number | null;
+  isMax: boolean;
+};
+
+// GET /profile. joinedAt is an ISO date; badges counts tiers exactly as the
+// achievements screen does; favorites is always 3 long, in slot order, null
+// for an empty slot. PUT /profile/favorite-badges answers with favorites.
+export type ProfileResponse = {
+  username: string;
+  joinedAt: string;
+  level: number;
+  levelProgress: LevelProgress;
+  badges: { earned: number; total: number };
+  favorites: (EarnedBadge | null)[];
+};
+
 // What a change that can earn something returns next to the changed item:
 // PATCH /tasks/:id and the streak goal sync and relapse have both fields,
 // POST /categories only badgesEarned.

@@ -7,8 +7,8 @@ import { BadgeCard } from "@/components/badges/badge-card";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
-import { API_URL } from "@/constants/api";
 import { useIsWide } from "@/hooks/use-is-wide";
+import { fetchAchievements } from "@/lib/achievements-api";
 import type { Achievement } from "@/types/api";
 
 // The Achievements tab of the Progress screen; until the statistics came, it
@@ -24,11 +24,7 @@ export function AchievementsPanel() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch(`${API_URL}/achievements`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setAchievements(await response.json());
+      setAchievements(await fetchAchievements(token));
       setFailed(false);
     } catch {
       setFailed(true);
