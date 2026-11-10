@@ -30,6 +30,7 @@ model User {
   badges UserBadge[]
   completedPeriods CompletedPeriod[]
   streakGoals StreakGoal[]
+  favoriteBadges FavoriteBadge[]
   @@map("users")
 }
 
@@ -186,10 +187,34 @@ model UserBadge {
   tier     BadgeTier
   earnedAt DateTime  @default(now())
 
+  favorites FavoriteBadge[]
+
   // Each tier is earned (and its XP awarded) at most once per account.
   // Also serves "all badges of a user" through its leading userId column.
   @@unique([userId, badgeKey, tier])
+  // Lets FavoriteBadge point at (id, userId) together, so the database
+  // itself refuses a showcase entry with somebody else's badge.
+  @@unique([id, userId])
   @@map("user_badges")
+}
+
+// The profile showcase: up to three earned badges, one per slot. The slot is
+// 0, 1 or 2; a CHECK constraint added by hand in the migration enforces it,
+// as Prisma has no syntax for CHECK.
+model FavoriteBadge {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slot        Int
+  userBadgeId String
+  // Composite, not just userBadgeId: the badge must belong to this user.
+  userBadge   UserBadge @relation(fields: [userBadgeId, userId], references: [id, userId], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, slot])
+  // The same earned badge cannot fill two slots.
+  @@unique([userBadgeId])
+  @@map("favorite_badges")
 }
 
 // Periods a cycle's tasks can be completed in; a subset of TaskType.
