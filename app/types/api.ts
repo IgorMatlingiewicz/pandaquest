@@ -32,6 +32,17 @@ export type Achievement = {
   tiers: AchievementTier[];
 };
 
+// One badge tier the user earned, as the profile showcase and the badge
+// picker show it (FavoriteSlot in backend/src/profile).
+export type EarnedBadge = {
+  badgeKey: string;
+  tier: BadgeTier;
+  earnedAt: string;
+};
+
+// One slot of PUT /profile/favorite-badges; null there is an empty slot.
+export type FavoritePick = { badgeKey: string; tier: BadgeTier };
+
 // What a change that can earn something returns next to the changed item:
 // PATCH /tasks/:id and the streak goal sync and relapse have both fields,
 // POST /categories only badgesEarned.

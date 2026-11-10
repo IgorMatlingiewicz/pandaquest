@@ -1,3 +1,5 @@
+import { HttpError } from "@/lib/http-error";
+
 /*
  * What a refused request means, as a translation key. The server decides
  * what happened and says so with a status code; the wording belongs to the
@@ -30,7 +32,54 @@ export function deleteCategoryErrorKey(status: number): string {
 
 /** 401: the stored session is no longer valid, so retrying will not help. */
 export function statsErrorKey(status: number): string {
-  return status === 401 ? "stats.sessionExpired" : "stats.loadError";
+  return status === 401 ? "common.sessionExpired" : "stats.loadError";
+}
+
+export function profileErrorKey(status: number): string {
+  return status === 401 ? "common.sessionExpired" : "profile.loadError";
+}
+
+/**
+ * PUT /profile/favorite-badges. 404: the badge is no longer among the user's
+ * (or never was); 400: the showcase itself was refused. Both mean the screen
+ * shows something stale, so the message asks for a refresh.
+ */
+export function saveShowcaseErrorKey(status: number): string {
+  if (status === 400) return "profile.showcase.invalid";
+  if (status === 404) return "profile.showcase.notEarned";
+  if (status === 401) return "common.sessionExpired";
+  return "common.tryAgain";
+}
+
+/** Where the password form shows a message: under a field or above them. */
+export type PasswordFailure = {
+  field: "current" | "next" | "form";
+  key: string;
+};
+
+/**
+ * PATCH /auth/password. A wrong current password is a 403, not a 401: the
+ * session is fine, so nothing here may log the user out.
+ */
+export function changePasswordFailure(error: unknown): PasswordFailure {
+  if (!(error instanceof HttpError)) {
+    return { field: "form", key: "common.noConnection" };
+  }
+  switch (error.status) {
+    case 403:
+      return { field: "current", key: "profile.password.wrongCurrent" };
+    case 400:
+      return { field: "next", key: "profile.password.tooWeak" };
+    case 409:
+      return { field: "next", key: "profile.password.sameAsCurrent" };
+    case 401:
+      return { field: "form", key: "common.sessionExpired" };
+    default:
+      return {
+        field: "form",
+        key: error.status >= 500 ? "common.genericError" : "common.tryAgain",
+      };
+  }
 }
 
 export function createStreakGoalErrorKey(status: number): string {

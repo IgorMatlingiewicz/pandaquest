@@ -11,6 +11,7 @@ const en: typeof pl = {
     logout: "Log out",
     genericError: "Something went wrong",
     noConnection: "Can't reach the server",
+    sessionExpired: "Your session has expired. Please log in again.",
   },
   nav: {
     home: "Home",
@@ -239,7 +240,6 @@ const en: typeof pl = {
   },
   stats: {
     loadError: "Couldn't load your statistics.",
-    sessionExpired: "Your session has expired. Please log in again.",
     retry: "Try again",
     empty: "Complete your first task and your activity will show up here.",
     // _few and _many as in badges.descriptions: never picked in English.
@@ -283,6 +283,22 @@ const en: typeof pl = {
     earnedOn: "{{tier}} · earned {{date}}",
     loadError: "Couldn't load your achievements.",
     retry: "Try again",
+  },
+  profile: {
+    badgeCount: "Badges: {{earned}} of {{total}}",
+    loadError: "Couldn't load your profile.",
+    showcase: {
+      invalid: "Couldn't save your showcase. Refresh the screen and try again.",
+      notEarned:
+        "This badge isn't among the ones you've earned. Refresh the screen and try again.",
+    },
+    password: {
+      required: "Fill in this field.",
+      mismatch: "The passwords don't match.",
+      wrongCurrent: "Your current password is incorrect.",
+      tooWeak: "The new password must be at least 8 characters long.",
+      sameAsCurrent: "The new password must be different from the current one.",
+    },
   },
 };
 

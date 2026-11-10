@@ -9,6 +9,7 @@ export default {
     logout: "Wyloguj",
     genericError: "Coś poszło nie tak",
     noConnection: "Brak połączenia z serwerem",
+    sessionExpired: "Sesja wygasła. Zaloguj się ponownie.",
   },
   nav: {
     home: "Strona główna",
@@ -239,7 +240,6 @@ export default {
   },
   stats: {
     loadError: "Nie udało się wczytać statystyk.",
-    sessionExpired: "Sesja wygasła. Zaloguj się ponownie.",
     retry: "Spróbuj ponownie",
     empty: "Ukończ pierwsze zadanie, a tutaj pojawi się Twoja aktywność.",
     tiles: {
@@ -282,5 +282,22 @@ export default {
     earnedOn: "{{tier}} · zdobyto {{date}}",
     loadError: "Nie udało się wczytać osiągnięć.",
     retry: "Spróbuj ponownie",
+  },
+  profile: {
+    badgeCount: "Odznaki: {{earned}} z {{total}}",
+    loadError: "Nie udało się wczytać profilu.",
+    showcase: {
+      invalid:
+        "Nie udało się zapisać gablotki. Odśwież ekran i spróbuj ponownie.",
+      notEarned:
+        "Tej odznaki nie ma wśród Twoich zdobytych. Odśwież ekran i spróbuj ponownie.",
+    },
+    password: {
+      required: "Wypełnij to pole.",
+      mismatch: "Hasła nie są takie same.",
+      wrongCurrent: "Obecne hasło jest nieprawidłowe.",
+      tooWeak: "Nowe hasło musi mieć co najmniej 8 znaków.",
+      sameAsCurrent: "Nowe hasło musi różnić się od obecnego.",
+    },
   },
 };

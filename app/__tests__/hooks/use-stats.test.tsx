@@ -104,7 +104,7 @@ describe("useStats", () => {
 
   it.each([
     [500, "stats.loadError"],
-    [401, "stats.sessionExpired"],
+    [401, "common.sessionExpired"],
   ])("turns a %i into %s", async (status, errorKey) => {
     const server = fakeServer();
     const { result } = open();
