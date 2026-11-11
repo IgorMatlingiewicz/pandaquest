@@ -1,18 +1,14 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { AchievementsPanel } from "@/components/badges/achievements-panel";
+import { ChoiceChip } from "@/components/choice-chip";
 import { StatsPanel } from "@/components/stats/stats-panel";
-import { Text } from "@/components/ui/text";
 import { useStats } from "@/hooks/use-stats";
 
 type Tab = "stats" | "achievements";
 
 const TABS: Tab[] = ["stats", "achievements"];
-
-// Same look as the goal name buttons on the streaks screen.
-const TAB_CLASS =
-  "min-h-11 items-center justify-center rounded-full border px-4";
 
 /*
  * Statistics and Achievements. The tab is local state, not a route: both
@@ -46,27 +42,15 @@ export default function ProgressScreen() {
         role="tablist"
         className="w-full max-w-4xl mx-auto flex-row gap-2 px-4 pt-4"
       >
-        {TABS.map((name) => {
-          const selected = name === tab;
-          return (
-            <Pressable
-              key={name}
-              onPress={() => select(name)}
-              role="tab"
-              aria-selected={selected}
-              className={`${TAB_CLASS} ${
-                selected ? "border-blue-500 bg-muted" : "border-border"
-              }`}
-            >
-              <Text
-                bold={selected}
-                className={selected ? "" : "text-muted-foreground"}
-              >
-                {t(`progress.tabs.${name}`)}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {TABS.map((name) => (
+          <ChoiceChip
+            key={name}
+            role="tab"
+            label={t(`progress.tabs.${name}`)}
+            selected={name === tab}
+            onPress={() => select(name)}
+          />
+        ))}
       </View>
 
       <View style={panel(tab === "stats")}>

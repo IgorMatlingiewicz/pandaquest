@@ -13,8 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { useAppColorScheme } from "@/context/ColorSchemeContext";
 import { useIsWide } from "@/hooks/use-is-wide";
-import { setLanguage } from "@/lib/languageStorage";
-import { type SupportedLanguage } from "@/i18n";
+import { useLanguage } from "@/hooks/use-language";
 import { NavItem } from "@/components/nav-item";
 import { HStack } from "@/components/ui/hstack";
 import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
@@ -29,7 +28,7 @@ function NavLinks() {
   return (
     <>
       <TabTrigger name="index" asChild>
-        <NavItem label={t("nav.home")} icon="home-outline" />
+        <NavItem label={t("nav.tasks")} icon="home-outline" />
       </TabTrigger>
       <TabTrigger name="streaks" asChild>
         <NavItem label={t("nav.streaks")} icon="timer-outline" />
@@ -44,19 +43,17 @@ function NavLinks() {
 function Settings() {
   const { logout } = useAuth();
   const { colorScheme, toggleColorScheme } = useAppColorScheme();
-  const { t, i18n } = useTranslation();
-
-  function toggleLanguage() {
-    const next: SupportedLanguage = i18n.language === "pl" ? "en" : "pl";
-    i18n.changeLanguage(next);
-    setLanguage(next);
-  }
+  const { t } = useTranslation();
+  const { language, changeLanguage } = useLanguage();
 
   return (
     <HStack space="md" className="items-center">
-      <Pressable onPress={toggleLanguage} hitSlop={8}>
+      <Pressable
+        onPress={() => changeLanguage(language === "pl" ? "en" : "pl")}
+        hitSlop={8}
+      >
         <Text className="text-muted-foreground">
-          {i18n.language === "pl" ? "PL" : "EN"}
+          {language === "pl" ? "PL" : "EN"}
         </Text>
       </Pressable>
       <Pressable onPress={toggleColorScheme} hitSlop={8}>
