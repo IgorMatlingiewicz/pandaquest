@@ -14,13 +14,17 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppColorScheme } from "@/context/ColorSchemeContext";
 import { useIsWide } from "@/hooks/use-is-wide";
 import { useLanguage } from "@/hooks/use-language";
+import { LevelBar } from "@/components/level-bar";
 import { NavItem } from "@/components/nav-item";
 import { HStack } from "@/components/ui/hstack";
-import { Progress, ProgressFilledTrack } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 
 const MENU_ANIMATION_MS = 180;
+
+// The profile shows the level bar in its own card, so the top bar leaves it
+// out there.
+const PAGES_WITHOUT_LEVEL_BAR = ["/profile"];
 
 function NavLinks() {
   const { t } = useTranslation();
@@ -73,41 +77,6 @@ function Settings() {
   );
 }
 
-function LevelBar() {
-  const { user } = useAuth();
-  const { t } = useTranslation();
-
-  const progress = user?.levelProgress;
-  if (!progress) return null;
-
-  // Derived on every render from the server's numbers; no state of its own.
-  const percent =
-    progress.xpForNextLevel === null
-      ? 100
-      : (progress.xpIntoLevel / progress.xpForNextLevel) * 100;
-
-  return (
-    <VStack space="xs" className="mt-2">
-      <HStack className="items-center justify-between">
-        <Text size="sm" bold>
-          {t("xp.level", { level: progress.level })}
-        </Text>
-        <Text size="sm" className="text-muted-foreground">
-          {progress.xpForNextLevel === null
-            ? t("xp.maxLevel")
-            : t("xp.progress", {
-                current: progress.xpIntoLevel,
-                total: progress.xpForNextLevel,
-              })}
-        </Text>
-      </HStack>
-      <Progress value={percent}>
-        <ProgressFilledTrack />
-      </Progress>
-    </VStack>
-  );
-}
-
 export function TopBar() {
   const insets = useSafeAreaInsets();
   const isWide = useIsWide();
@@ -115,6 +84,9 @@ export function TopBar() {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const levelProgress = PAGES_WITHOUT_LEVEL_BAR.includes(pathname)
+    ? null
+    : user?.levelProgress;
 
   // Picking a page closes the menu, and so does growing the window wide.
   useEffect(() => {
@@ -178,9 +150,11 @@ export function TopBar() {
         </Animated.View>
       )}
 
-      <Animated.View layout={LinearTransition.duration(MENU_ANIMATION_MS)}>
-        <LevelBar />
-      </Animated.View>
+      {levelProgress && (
+        <Animated.View layout={LinearTransition.duration(MENU_ANIMATION_MS)}>
+          <LevelBar progress={levelProgress} className="mt-2" />
+        </Animated.View>
+      )}
     </VStack>
   );
 }

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { LevelBar } from "@/components/level-bar";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
@@ -11,8 +12,8 @@ type Props = {
   onShowAllBadges: () => void;
 };
 
-// Who the user is. The XP bar is already in the top bar on every page, so
-// only the level number is repeated here.
+// Who the user is. The level bar sits here, and the top bar leaves it out on
+// this page, so it is shown once.
 export function ProfileSummary({ profile, onShowAllBadges }: Props) {
   const { t, i18n } = useTranslation();
   const joined = new Intl.DateTimeFormat(i18n.language, {
@@ -23,7 +24,7 @@ export function ProfileSummary({ profile, onShowAllBadges }: Props) {
     <Card>
       <VStack space="xs">
         <Heading size="xl">{profile.username}</Heading>
-        <Text bold>{t("xp.level", { level: profile.level })}</Text>
+        <LevelBar progress={profile.levelProgress} className="my-1" />
         <Text className="text-muted-foreground">
           {t("profile.joined", { date: joined })}
         </Text>
