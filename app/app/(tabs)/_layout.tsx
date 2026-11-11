@@ -27,6 +27,7 @@ export default function TabLayout() {
         <TabTrigger name="index" href="/" />
         <TabTrigger name="streaks" href="/streaks" />
         <TabTrigger name="progress" href="/progress" />
+        <TabTrigger name="profile" href="/profile" />
       </TabList>
     </Tabs>
   );

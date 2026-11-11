@@ -46,7 +46,11 @@ export function BadgePickerSheet({
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="p-4">
+      {/* The sheet is a dialog: screen readers announce it by this name. */}
+      <ActionsheetContent
+        className="p-4"
+        aria-label={t("profile.picker.title")}
+      >
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>

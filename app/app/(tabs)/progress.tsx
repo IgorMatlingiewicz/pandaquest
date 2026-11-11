@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { AchievementsPanel } from "@/components/badges/achievements-panel";
 import { ChoiceChip } from "@/components/choice-chip";
@@ -10,17 +11,37 @@ type Tab = "stats" | "achievements";
 
 const TABS: Tab[] = ["stats", "achievements"];
 
+const isTab = (value: string): value is Tab =>
+  (TABS as string[]).includes(value);
+
 /*
  * Statistics and Achievements. The tab is local state, not a route: both
  * panels stay mounted and the hidden one is not shown, so switching back
  * keeps what was on screen instead of loading from scratch. The cost: the
- * address is always /progress, and the back button does not switch tabs.
+ * address is /progress, and the back button does not switch tabs.
+ *
+ * Another screen can still ask for a tab with /progress?tab=achievements
+ * ("See all badges" on the profile). The page may already be mounted, so the
+ * parameter is followed whenever it changes, not only at the start.
  */
 export default function ProgressScreen() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("stats");
   // Here and not in the panel, so the data outlives the panel being hidden.
   const { state, refresh, retry } = useStats();
+  const { tab: requested } = useLocalSearchParams<{ tab?: string }>();
+
+  useEffect(() => {
+    if (!requested) return;
+    if (isTab(requested)) {
+      if (requested === "stats") refresh();
+      setTab(requested);
+    }
+    // Used once and removed: otherwise the next visit through the menu would
+    // switch the tab again, and the same link pressed a second time would be
+    // no change at all, so it would not switch.
+    router.setParams({ tab: undefined });
+  }, [requested, refresh]);
 
   function select(next: Tab) {
     // Back on Statistics: refreshed quietly, the data on screen stays.

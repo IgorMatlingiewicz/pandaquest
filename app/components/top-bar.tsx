@@ -36,6 +36,9 @@ function NavLinks() {
       <TabTrigger name="progress" asChild>
         <NavItem label={t("nav.progress")} icon="chart-box-outline" />
       </TabTrigger>
+      <TabTrigger name="profile" asChild>
+        <NavItem label={t("nav.profile")} icon="account-outline" />
+      </TabTrigger>
     </>
   );
 }

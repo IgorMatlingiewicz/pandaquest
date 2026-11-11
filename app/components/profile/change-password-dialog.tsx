@@ -71,7 +71,9 @@ function PasswordField({
           }
           returnKeyType={isLast ? "done" : "next"}
           onSubmitEditing={onSubmitEditing}
-          accessibilityLabel={label}
+          // aria-label, not accessibilityLabel: gluestack's field always sends
+          // an aria-label of its own ("Input Field") unless given this one.
+          aria-label={label}
         />
       </Input>
       {errorKey && (

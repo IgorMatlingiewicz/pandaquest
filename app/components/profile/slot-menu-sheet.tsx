@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { badgeName, tierName } from "@/components/profile/badge-labels";
@@ -30,21 +31,25 @@ export function SlotMenuSheet({ badge, onClose, onChange, onRemove }: Props) {
   const { t } = useTranslation();
   const change = t("profile.slotMenu.change");
   const remove = t("profile.slotMenu.remove");
+  // The sheet still slides down after badge turns null; it keeps showing the
+  // last badge meanwhile instead of losing its title halfway.
+  const [shown, setShown] = useState(badge);
+  if (badge && badge !== shown) setShown(badge);
+  const title = shown
+    ? `${badgeName(t, shown.badgeKey)} · ${tierName(t, shown.tier)}`
+    : "";
 
   return (
     <Actionsheet isOpen={badge !== null} onClose={onClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="p-4">
+      {/* The sheet is a dialog: screen readers announce it by this name. */}
+      <ActionsheetContent className="p-4" aria-label={title}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
         <VStack space="sm" className="mt-2 w-full">
-          {badge && (
-            <Heading size="md">
-              {badgeName(t, badge.badgeKey)} · {tierName(t, badge.tier)}
-            </Heading>
-          )}
+          <Heading size="md">{title}</Heading>
           <ActionsheetItem
             onPress={onChange}
             accessibilityRole="button"
