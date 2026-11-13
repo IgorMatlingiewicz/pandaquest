@@ -44,10 +44,15 @@ export function ProgressUpdateSheet({ isOpen, onClose, task, onSave }: Props) {
     onClose();
   }
 
+  const progressLabel = t("tasks.task.progressWithTarget", {
+    target: task.progressTarget ?? "-",
+  });
+
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="p-4">
+      {/* The sheet is a dialog: screen readers announce it by this name. */}
+      <ActionsheetContent className="p-4" aria-label={task.title}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
@@ -56,13 +61,10 @@ export function ProgressUpdateSheet({ isOpen, onClose, task, onSave }: Props) {
           <Heading size="md">{task.title}</Heading>
 
           <VStack space="xs">
-            <Text className="text-muted-foreground">
-              {t("tasks.task.progressWithTarget", {
-                target: task.progressTarget ?? "-",
-              })}
-            </Text>
+            <Text className="text-muted-foreground">{progressLabel}</Text>
             <Input>
               <InputField
+                aria-label={progressLabel}
                 value={value}
                 onChangeText={setValue}
                 keyboardType="numeric"

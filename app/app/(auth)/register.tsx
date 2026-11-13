@@ -37,7 +37,10 @@ export default function RegisterScreen() {
       </Heading>
 
       <Input className="mb-2">
+        {/* No visible label here, so the placeholder's text names the field;
+            aria-label, as gluestack would otherwise send "Input Field". */}
         <InputField
+          aria-label={t("auth.email")}
           placeholder={t("auth.email")}
           value={email}
           onChangeText={setEmail}
@@ -48,6 +51,7 @@ export default function RegisterScreen() {
 
       <Input className="mb-2">
         <InputField
+          aria-label={t("auth.username")}
           placeholder={t("auth.username")}
           value={username}
           onChangeText={setUsername}
@@ -57,6 +61,7 @@ export default function RegisterScreen() {
 
       <Input className="mb-2">
         <InputField
+          aria-label={t("auth.password")}
           placeholder={t("auth.password")}
           value={password}
           onChangeText={setPassword}

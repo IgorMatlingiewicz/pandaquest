@@ -95,18 +95,21 @@ export function TaskSheet({
     onClose();
   }
 
+  const sheetTitle = isEditing
+    ? t("tasks.task.editTitle")
+    : t("tasks.task.newTitle");
+
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="p-4">
+      {/* The sheet is a dialog: screen readers announce it by this name. */}
+      <ActionsheetContent className="p-4" aria-label={sheetTitle}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
         <VStack space="md" className="w-full mt-2">
-          <Heading size="md">
-            {isEditing ? t("tasks.task.editTitle") : t("tasks.task.newTitle")}
-          </Heading>
+          <Heading size="md">{sheetTitle}</Heading>
 
           <VStack space="xs">
             <Text className="text-muted-foreground">
@@ -114,6 +117,7 @@ export function TaskSheet({
             </Text>
             <Input>
               <InputField
+                aria-label={t("tasks.task.nameLabel")}
                 value={title}
                 onChangeText={setTitle}
                 placeholder={t("tasks.task.namePlaceholder")}
@@ -206,6 +210,7 @@ export function TaskSheet({
               </Text>
               <Input>
                 <InputField
+                  aria-label={t("tasks.task.targetLabel")}
                   value={progressTarget}
                   onChangeText={setProgressTarget}
                   keyboardType="numeric"
@@ -222,6 +227,7 @@ export function TaskSheet({
               </Text>
               <Input>
                 <InputField
+                  aria-label={t("tasks.task.currentProgressLabel")}
                   value={progressCurrent}
                   onChangeText={setProgressCurrent}
                   keyboardType="numeric"

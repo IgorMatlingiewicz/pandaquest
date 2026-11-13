@@ -70,20 +70,21 @@ export function CategorySheet({
     onClose();
   }
 
+  const title = initialValues
+    ? t("tasks.category.editTitle")
+    : t("tasks.category.newTitle");
+
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="p-4">
+      {/* The sheet is a dialog: screen readers announce it by this name. */}
+      <ActionsheetContent className="p-4" aria-label={title}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
         <VStack space="md" className="w-full mt-2">
-          <Heading size="md">
-            {initialValues
-              ? t("tasks.category.editTitle")
-              : t("tasks.category.newTitle")}
-          </Heading>
+          <Heading size="md">{title}</Heading>
 
           <VStack space="xs">
             <Text className="text-muted-foreground">
@@ -91,6 +92,7 @@ export function CategorySheet({
             </Text>
             <Input>
               <InputField
+                aria-label={t("tasks.category.nameLabel")}
                 value={name}
                 onChangeText={setName}
                 placeholder={t("tasks.category.namePlaceholder")}
@@ -104,6 +106,7 @@ export function CategorySheet({
             </Text>
             <Input>
               <InputField
+                aria-label={t("tasks.category.iconLabel")}
                 value={icon}
                 onChangeText={setIcon}
                 placeholder={t("tasks.category.iconPlaceholder", {

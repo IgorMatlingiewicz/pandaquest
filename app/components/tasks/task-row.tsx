@@ -54,6 +54,9 @@ export function TaskRow({
 
         {task.completionMode === "BOOLEAN" ? (
           <Checkbox
+            // aria-label: without it gluestack names the checkbox after its
+            // value, which is the task's id.
+            aria-label={task.title}
             value={task.id}
             isChecked={isCompleted}
             onChange={() => onToggle(task)}

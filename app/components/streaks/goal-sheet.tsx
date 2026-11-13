@@ -48,7 +48,8 @@ export function GoalSheet({ isOpen, onClose, maxLength, onCreate }: Props) {
   return (
     <Actionsheet isOpen={isOpen} onClose={onClose}>
       <ActionsheetBackdrop />
-      <ActionsheetContent className="p-4">
+      {/* The sheet is a dialog: screen readers announce it by this name. */}
+      <ActionsheetContent className="p-4" aria-label={t("streaks.form.title")}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
@@ -66,7 +67,9 @@ export function GoalSheet({ isOpen, onClose, maxLength, onCreate }: Props) {
                 onChangeText={setName}
                 maxLength={maxLength}
                 placeholder={t("streaks.form.namePlaceholder")}
-                accessibilityLabel={t("streaks.form.nameLabel")}
+                // aria-label: gluestack's field always sends its own
+                // ("Input Field"), which would win over accessibilityLabel.
+                aria-label={t("streaks.form.nameLabel")}
               />
             </Input>
             {errorKey && (
