@@ -6,6 +6,8 @@ import {
 import type { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { AuthService } from './auth.service';
+import { FRIEND_CODE_INDEX, isFriendCode } from '../friends/friend-code';
+import { uniqueViolation } from '../testing/prisma-errors';
 import type { PrismaService } from '../prisma/prisma.service';
 import { TaskType } from '../generated/prisma/client';
 
@@ -144,6 +146,39 @@ describe('AuthService', () => {
         create: { periodKey: '2026-W41', progressCurrent: 2 },
       });
       expect(gym?.progressCurrent).toBeUndefined();
+    });
+
+    it('gives the new user a friend code', async () => {
+      await service.register(dto);
+
+      const { data } = (
+        prisma.user.create.mock.calls as [{ data: { friendCode: string } }][]
+      )[0][0];
+      expect(isFriendCode(data.friendCode)).toBe(true);
+    });
+
+    it('redoes the whole sign-up with a new code when the code is taken', async () => {
+      prisma.user.create.mockRejectedValueOnce(
+        uniqueViolation(FRIEND_CODE_INDEX),
+      );
+
+      await service.register(dto);
+
+      const codes = (
+        prisma.user.create.mock.calls as [{ data: { friendCode: string } }][]
+      ).map(([args]) => args.data.friendCode);
+      expect(codes).toHaveLength(2);
+      expect(codes[1]).not.toBe(codes[0]);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    });
+
+    it('answers 409 when another sign-up takes the email at the same moment', async () => {
+      prisma.user.create.mockRejectedValueOnce(
+        uniqueViolation('users_email_key'),
+      );
+
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+      expect(prisma.user.create).toHaveBeenCalledTimes(1);
     });
 
     it('keeps LIFE progress on the task itself', async () => {

@@ -21,6 +21,9 @@ model User {
   xpTotal      Int      @default(0)
   level        Int      @default(1)
   timezone     String   @default("Europe/Warsaw")
+  // How friends find each other (usernames are not unique): 8 characters of
+  // FRIEND_CODE_ALPHABET in friend-code.ts, stored normalized.
+  friendCode   String   @unique
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -31,7 +34,35 @@ model User {
   completedPeriods CompletedPeriod[]
   streakGoals StreakGoal[]
   favoriteBadges FavoriteBadge[]
+  sentFriendRequests     Friendship[] @relation("FriendshipRequester")
+  receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
   @@map("users")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// One row per pair of users, whichever of them asked: the migration adds by
+// hand a unique index on (LEAST, GREATEST) of the two ids and a CHECK that
+// they differ, as Prisma has no syntax for either. A declined row stays, so
+// the cooldown on asking again can be counted from respondedAt.
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  // Incoming and outgoing requests; together also "every friend of a user".
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+  @@map("friendships")
 }
 
 enum TaskType {

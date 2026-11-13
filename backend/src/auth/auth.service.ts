@@ -12,7 +12,12 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { hashPassword, verifyPassword } from './password';
 import { Prisma, TaskType, CompletionMode } from '../generated/prisma/client';
 import { getPeriodKey } from '../common/period';
+import { violatedUniqueIndex } from '../common/prisma-errors';
+import { withFreshFriendCode } from '../friends/friend-code';
 import { levelProgress } from '../xp/xp.logic';
+
+/** The unique index on users.email, as the first migration names it. */
+const EMAIL_INDEX = 'users_email_key';
 
 type DefaultTaskSeed = {
   title: string;
@@ -96,23 +101,34 @@ export class AuthService {
 
     const passwordHash = await hashPassword(dto.password);
 
-    const user = await this.prisma.$transaction(async (tx) => {
-      const createdUser = await tx.user.create({
-        data: {
-          email: dto.email,
-          username: dto.username,
-          passwordHash,
-          timezone: dto.timezone,
-        },
-      });
+    // A taken friend code redoes the whole transaction with a new one.
+    const user = await withFreshFriendCode((friendCode) =>
+      this.prisma.$transaction(async (tx) => {
+        const createdUser = await tx.user.create({
+          data: {
+            email: dto.email,
+            username: dto.username,
+            passwordHash,
+            timezone: dto.timezone,
+            friendCode,
+          },
+        });
 
-      await this.seedDefaultCategories(
-        tx,
-        createdUser.id,
-        createdUser.timezone,
-      );
+        await this.seedDefaultCategories(
+          tx,
+          createdUser.id,
+          createdUser.timezone,
+        );
 
-      return createdUser;
+        return createdUser;
+      }),
+    ).catch((error: unknown) => {
+      // Two sign-ups with one email at the same moment both pass the check
+      // above; the database stops the second, and it gets the same answer.
+      if (violatedUniqueIndex(error) === EMAIL_INDEX) {
+        throw new ConflictException('Email już zajęty');
+      }
+      throw error;
     });
 
     return {
