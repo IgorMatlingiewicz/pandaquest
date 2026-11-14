@@ -38,6 +38,11 @@ export function NavItem({
       className={`flex-row items-center gap-2 rounded-lg px-3 py-2 ${
         isFocused ? "bg-muted" : ""
       }`}
+      // TabTrigger hands its own style down (row, space-between). In the
+      // burger menu, where a link is as wide as the menu, that pushed the
+      // icon to the left edge and the label to the right one. The classes
+      // above lay the link out, so that style is replaced here.
+      style={{ justifyContent: "flex-start" }}
     >
       {/* The count sits on the icon's corner, so the label keeps its place:
           in the burger menu the labels stay in line with each other. Some
