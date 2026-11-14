@@ -1,4 +1,4 @@
-import type { SendFriendRequestResult } from "@/types/api";
+import type { FriendBadge, SendFriendRequestResult } from "@/types/api";
 
 /*
  * The friends screens without React: the friend code as people type it, and
@@ -85,6 +85,22 @@ export function spelledFriendCode(code: string): string {
     .filter(Boolean)
     .map((half) => [...half].join(" "))
     .join(", ");
+}
+
+/**
+ * The highest tier a friend has of one badge: its icon color, its earned
+ * date and the threshold its description names. The server sends earned
+ * tiers only, lowest first, so it is the last one.
+ */
+export function topFriendTier(
+  badge: FriendBadge,
+): FriendBadge["tiers"][number] | null {
+  return badge.tiers[badge.tiers.length - 1] ?? null;
+}
+
+/** Earned tiers in all: what the friend's "badges: X of Y" counts. */
+export function earnedTierCount(badges: readonly FriendBadge[]): number {
+  return badges.reduce((sum, badge) => sum + badge.tiers.length, 0);
 }
 
 /** What the sender is told after a request went through. */

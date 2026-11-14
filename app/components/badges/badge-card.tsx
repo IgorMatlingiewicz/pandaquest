@@ -14,12 +14,16 @@ import {
   highestEarnedTier,
   nextTier,
 } from "@/lib/achievements";
-import type { Achievement, AchievementTier } from "@/types/api";
+import type { Achievement, BadgeTier } from "@/types/api";
 
 const UNEARNED_COLOR = "#9ca3af";
 
+// What a tier chip needs: the own achievements and a friend's badges both
+// have it, though only the own ones carry XP.
+type ChipTier = { tier: BadgeTier; threshold: number; earnedAt: string | null };
+
 // One chip per tier: colored once earned, muted until then.
-function TierChip({ tier }: { tier: AchievementTier }) {
+export function TierChip({ tier }: { tier: ChipTier }) {
   const { t } = useTranslation();
   const earned = tier.earnedAt !== null;
   const color = TIER_COLORS[tier.tier];
@@ -51,6 +55,60 @@ function TierChip({ tier }: { tier: AchievementTier }) {
         {t(`badges.tiers.${tier.tier}`)} · {tier.threshold}
       </Text>
     </HStack>
+  );
+}
+
+type HeadingProps = {
+  badgeKey: string;
+  // The highest tier earned, for the trophy's color; null before the first.
+  topTier: BadgeTier | null;
+  // The threshold the description names.
+  threshold: number;
+};
+
+// The trophy, the badge's name and what it is for.
+export function BadgeHeading({ badgeKey, topTier, threshold }: HeadingProps) {
+  const { t } = useTranslation();
+
+  return (
+    <HStack space="md" className="items-start">
+      <MaterialCommunityIcons
+        name={topTier ? "trophy" : "trophy-outline"}
+        size={40}
+        color={topTier ? TIER_COLORS[topTier] : UNEARNED_COLOR}
+      />
+      <VStack space="xs" className="flex-1">
+        <Heading size="sm">
+          {t(`badges.names.${badgeKey}`, { defaultValue: badgeKey })}
+        </Heading>
+        <Text size="sm" className="text-muted-foreground">
+          {t(`badges.descriptions.${badgeKey}`, {
+            count: threshold,
+            defaultValue: "",
+          })}
+        </Text>
+      </VStack>
+    </HStack>
+  );
+}
+
+// "Gold · earned 5 Nov 2026", in the app's language.
+export function EarnedOn({
+  tier,
+  earnedAt,
+}: {
+  tier: BadgeTier;
+  earnedAt: string;
+}) {
+  const { t, i18n } = useTranslation();
+  const date = new Intl.DateTimeFormat(i18n.language, {
+    dateStyle: "medium",
+  }).format(new Date(earnedAt));
+
+  return (
+    <Text size="xs" className="text-muted-foreground">
+      {t("achievements.earnedOn", { tier: t(`badges.tiers.${tier}`), date })}
+    </Text>
   );
 }
 
@@ -111,36 +169,21 @@ function ProgressRow({ achievement }: { achievement: Achievement }) {
   );
 }
 
+/*
+ * One of the user's own achievements: every tier, the progress toward the
+ * next one. A friend's badge is built from the same parts, without the
+ * progress (FriendBadgeCard).
+ */
 export function BadgeCard({ achievement }: { achievement: Achievement }) {
-  const { t, i18n } = useTranslation();
-  const { key } = achievement;
   const highest = highestEarnedTier(achievement);
-
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" }).format(
-      new Date(iso),
-    );
 
   return (
     <Card size="sm" className="flex-1">
-      <HStack space="md" className="items-start">
-        <MaterialCommunityIcons
-          name={highest ? "trophy" : "trophy-outline"}
-          size={40}
-          color={highest ? TIER_COLORS[highest.tier] : UNEARNED_COLOR}
-        />
-        <VStack space="xs" className="flex-1">
-          <Heading size="sm">
-            {t(`badges.names.${key}`, { defaultValue: key })}
-          </Heading>
-          <Text size="sm" className="text-muted-foreground">
-            {t(`badges.descriptions.${key}`, {
-              count: describedThreshold(achievement),
-              defaultValue: "",
-            })}
-          </Text>
-        </VStack>
-      </HStack>
+      <BadgeHeading
+        badgeKey={achievement.key}
+        topTier={highest?.tier ?? null}
+        threshold={describedThreshold(achievement)}
+      />
 
       <HStack space="xs" className="flex-wrap">
         {achievement.tiers.map((tier) => (
@@ -151,12 +194,7 @@ export function BadgeCard({ achievement }: { achievement: Achievement }) {
       <ProgressRow achievement={achievement} />
 
       {highest?.earnedAt && (
-        <Text size="xs" className="text-muted-foreground">
-          {t("achievements.earnedOn", {
-            tier: t(`badges.tiers.${highest.tier}`),
-            date: formatDate(highest.earnedAt),
-          })}
-        </Text>
+        <EarnedOn tier={highest.tier} earnedAt={highest.earnedAt} />
       )}
     </Card>
   );

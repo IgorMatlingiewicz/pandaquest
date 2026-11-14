@@ -8,7 +8,7 @@ import type { Friend } from "@/types/api";
 
 type Props = {
   friends: Friend[];
-  // Opens a friend's profile; until that screen exists, rows only show.
+  // Opens a friend's profile; without it, rows only show.
   onOpen?: (friend: Friend) => void;
 };
 
@@ -27,7 +27,7 @@ function FriendRow({
           {friend.username}
         </Text>
         <Text size="sm" className="text-muted-foreground">
-          {t("friends.level", { level: friend.level })}
+          {t("xp.level", { level: friend.level })}
         </Text>
       </View>
       {onOpen && (

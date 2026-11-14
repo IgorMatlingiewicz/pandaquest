@@ -5,15 +5,22 @@ import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
-import type { ProfileResponse } from "@/types/api";
+import type { LevelProgress, ProfileResponse } from "@/types/api";
+
+// The user's own profile has the progress toward the next level; a friend's
+// has the level only, as the progress is made of XP, which stays private.
+type SummaryData = Pick<
+  ProfileResponse,
+  "username" | "joinedAt" | "level" | "badges"
+> & { levelProgress?: LevelProgress };
 
 type Props = {
-  profile: ProfileResponse;
+  profile: SummaryData;
   onShowAllBadges: () => void;
 };
 
-// Who the user is. The level bar sits here, and the top bar leaves it out on
-// this page, so it is shown once.
+// Who the user is, or who a friend is. The level bar sits here, and the top
+// bar leaves it out on the own profile, so it is shown once.
 export function ProfileSummary({ profile, onShowAllBadges }: Props) {
   const { t, i18n } = useTranslation();
   const joined = new Intl.DateTimeFormat(i18n.language, {
@@ -24,7 +31,11 @@ export function ProfileSummary({ profile, onShowAllBadges }: Props) {
     <Card>
       <VStack space="xs">
         <Heading size="xl">{profile.username}</Heading>
-        <LevelBar progress={profile.levelProgress} className="my-1" />
+        {profile.levelProgress ? (
+          <LevelBar progress={profile.levelProgress} className="my-1" />
+        ) : (
+          <Text bold>{t("xp.level", { level: profile.level })}</Text>
+        )}
         <Text className="text-muted-foreground">
           {t("profile.joined", { date: joined })}
         </Text>

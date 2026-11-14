@@ -3,6 +3,8 @@ import {
   FRIEND_CODE_LENGTH,
   badgeText,
   daysUntil,
+  earnedTierCount,
+  topFriendTier,
   spelledFriendCode,
   formatFriendCode,
   friendCodeChars,
@@ -119,6 +121,36 @@ describe("spelledFriendCode", () => {
     ["", ""],
   ])("spells %j as %j", (code, spelled) => {
     expect(spelledFriendCode(code)).toBe(spelled);
+  });
+});
+
+describe("a friend's badges", () => {
+  const at = (day: number) =>
+    `2026-10-${String(day).padStart(2, "0")}T08:00:00.000Z`;
+  const STREAK = {
+    key: "daily_streak",
+    tiers: [
+      { tier: "BRONZE" as const, threshold: 10, earnedAt: at(3) },
+      { tier: "SILVER" as const, threshold: 30, earnedAt: at(20) },
+    ],
+  };
+  const GOAL = {
+    key: "life_goal",
+    tiers: [{ tier: "DIAMOND" as const, threshold: 1, earnedAt: at(9) }],
+  };
+
+  it("take the highest tier as the last one, as the server sends them", () => {
+    expect(topFriendTier(STREAK)).toEqual({
+      tier: "SILVER",
+      threshold: 30,
+      earnedAt: at(20),
+    });
+    expect(topFriendTier({ key: "none", tiers: [] })).toBeNull();
+  });
+
+  it("count every earned tier, as the badge count on the profile does", () => {
+    expect(earnedTierCount([STREAK, GOAL])).toBe(3);
+    expect(earnedTierCount([])).toBe(0);
   });
 });
 

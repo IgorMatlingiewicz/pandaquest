@@ -30,8 +30,11 @@ export function NavItem({
     <Pressable
       {...props}
       accessibilityRole="tab"
-      accessibilityState={{ selected: isFocused }}
-      aria-label={badge > 0 ? badgeLabel : undefined}
+      // aria-*, as in ChoiceChip: accessibilityState does not reach the web
+      // page. The label always: on the web the icon is a font glyph, which
+      // would otherwise become part of the link's name ("󰚡 Zadania").
+      aria-selected={isFocused}
+      aria-label={badge > 0 && badgeLabel ? badgeLabel : label}
       className={`flex-row items-center gap-2 rounded-lg px-3 py-2 ${
         isFocused ? "bg-muted" : ""
       }`}

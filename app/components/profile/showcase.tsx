@@ -12,7 +12,8 @@ type SlotProps = {
   slot: ShowcaseSlot;
   saving: boolean;
   disabled: boolean;
-  onPress: () => void;
+  // Null for a friend's showcase: the slot only shows.
+  onPress: (() => void) | null;
 };
 
 function ShowcaseSlotView({ slot, saving, disabled, onPress }: SlotProps) {
@@ -21,6 +22,53 @@ function ShowcaseSlotView({ slot, saving, disabled, onPress }: SlotProps) {
   const badge = slot.kind === "badge" ? slot : null;
   const name = badge && badgeName(t, badge.badgeKey);
   const tier = badge && tierName(t, badge.tier);
+  const readOnly = onPress === null;
+
+  const className = `min-h-32 flex-1 items-center justify-center gap-1 rounded-xl p-2 ${
+    badge
+      ? "border border-border bg-card"
+      : "border-2 border-dashed border-border"
+  } ${disabled && !saving ? "opacity-60" : ""}`;
+
+  const content = saving ? (
+    <ActivityIndicator accessibilityLabel={t("profile.showcase.saving")} />
+  ) : badge ? (
+    <>
+      <MaterialCommunityIcons
+        name="trophy"
+        size={40}
+        color={TIER_COLORS[badge.tier]}
+      />
+      <Text size="sm" bold className="text-center">
+        {name}
+      </Text>
+      {/* The tier is always written out: its color is not all of it. */}
+      <Text size="xs" className="text-center text-muted-foreground">
+        {tier}
+      </Text>
+    </>
+  ) : readOnly ? null : (
+    <MaterialCommunityIcons name="plus" size={32} color={MUTED_ICON} />
+  );
+
+  // A friend's slot: no button, and an empty one keeps its dashed outline
+  // but no "+", which would promise an action that is not there. The three
+  // places stay, so a showcase with one badge still looks like a showcase.
+  if (readOnly) {
+    return (
+      <View
+        accessible
+        accessibilityLabel={
+          badge
+            ? t("profile.showcase.badgeSlotReadOnly", { number, name, tier })
+            : t("profile.showcase.emptySlotReadOnly", { number })
+        }
+        className={className}
+      >
+        {content}
+      </View>
+    );
+  }
 
   return (
     <Pressable
@@ -34,32 +82,9 @@ function ShowcaseSlotView({ slot, saving, disabled, onPress }: SlotProps) {
       }
       aria-busy={saving}
       aria-disabled={disabled}
-      className={`min-h-32 flex-1 items-center justify-center gap-1 rounded-xl p-2 ${
-        badge
-          ? "border border-border bg-card"
-          : "border-2 border-dashed border-border"
-      } ${disabled && !saving ? "opacity-60" : ""}`}
+      className={className}
     >
-      {saving ? (
-        <ActivityIndicator accessibilityLabel={t("profile.showcase.saving")} />
-      ) : badge ? (
-        <>
-          <MaterialCommunityIcons
-            name="trophy"
-            size={40}
-            color={TIER_COLORS[badge.tier]}
-          />
-          <Text size="sm" bold className="text-center">
-            {name}
-          </Text>
-          {/* The tier is always written out: its color is not all of it. */}
-          <Text size="xs" className="text-center text-muted-foreground">
-            {tier}
-          </Text>
-        </>
-      ) : (
-        <MaterialCommunityIcons name="plus" size={32} color={MUTED_ICON} />
-      )}
+      {content}
     </Pressable>
   );
 }
@@ -67,16 +92,17 @@ function ShowcaseSlotView({ slot, saving, disabled, onPress }: SlotProps) {
 type Props = {
   slots: ShowcaseSlot[];
   // The slot being saved; while one is, no slot can be pressed.
-  savingSlot: number | null;
-  onPressSlot: (slot: ShowcaseSlot) => void;
+  savingSlot?: number | null;
+  // Left out for a friend's showcase, which only shows.
+  onPressSlot?: (slot: ShowcaseSlot) => void;
 };
 
 /*
  * The three showcase slots side by side. Only shows what it is given and
- * says what was pressed: no data of its own, so the same component can show
- * a friend's showcase later.
+ * says what was pressed: no data of its own, so the same component shows a
+ * friend's showcase, read-only, when there is nothing to press.
  */
-export function Showcase({ slots, savingSlot, onPressSlot }: Props) {
+export function Showcase({ slots, savingSlot = null, onPressSlot }: Props) {
   return (
     <View className="flex-row gap-3">
       {slots.map((slot) => (
@@ -85,7 +111,7 @@ export function Showcase({ slots, savingSlot, onPressSlot }: Props) {
           slot={slot}
           saving={slot.slot === savingSlot}
           disabled={savingSlot !== null}
-          onPress={() => onPressSlot(slot)}
+          onPress={onPressSlot ? () => onPressSlot(slot) : null}
         />
       ))}
     </View>

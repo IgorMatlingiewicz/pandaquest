@@ -305,6 +305,9 @@ export default {
       emptySlot: "Puste miejsce {{number}} w gablotce. Dodaj odznakę.",
       badgeSlot:
         "Miejsce {{number}} w gablotce: {{name}}, {{tier}}. Zmień lub usuń.",
+      // A friend's showcase only shows: no action to name.
+      emptySlotReadOnly: "Miejsce {{number}} w gablotce: puste.",
+      badgeSlotReadOnly: "Miejsce {{number}} w gablotce: {{name}}, {{tier}}.",
       saving: "Zapisywanie",
       saveError: "Nie udało się zapisać gablotki",
       invalid:
@@ -348,7 +351,6 @@ export default {
   friends: {
     loadError: "Nie udało się wczytać znajomych.",
     retry: "Spróbuj ponownie",
-    level: "Poziom {{level}}",
     tabs: {
       friends: "Znajomi",
       requests: "Zaproszenia",
@@ -376,6 +378,20 @@ export default {
       submitting: "Wysyłanie...",
       sent: "Zaproszenie wysłane",
       nowFriends: "Ta osoba też Cię zaprosiła. Jesteście teraz znajomymi!",
+    },
+    profile: {
+      back: "Znajomi",
+      remove: "Usuń ze znajomych",
+      removing: "Usuwanie...",
+      removeTitle: "Usunąć ze znajomych: {{name}}?",
+      removeMessage:
+        "Ta osoba zniknie z Twojej listy, a Ty z jej. W każdej chwili możecie zaprosić się ponownie.",
+      removed: "Usunięto ze znajomych: {{name}}",
+    },
+    badges: {
+      back: "Profil",
+      title: "Zdobyte odznaki: {{count}}",
+      empty: "Ta osoba nie ma jeszcze żadnej odznaki.",
     },
     list: {
       title: "Twoi znajomi ({{count}})",

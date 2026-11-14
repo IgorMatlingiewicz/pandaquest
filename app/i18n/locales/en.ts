@@ -307,6 +307,9 @@ const en: typeof pl = {
       emptySlot: "Empty showcase spot {{number}}. Add a badge.",
       badgeSlot:
         "Showcase spot {{number}}: {{name}}, {{tier}}. Change or remove.",
+      // A friend's showcase only shows: no action to name.
+      emptySlotReadOnly: "Showcase spot {{number}}: empty.",
+      badgeSlotReadOnly: "Showcase spot {{number}}: {{name}}, {{tier}}.",
       saving: "Saving",
       saveError: "Couldn't save your showcase",
       invalid: "Couldn't save your showcase. Refresh the screen and try again.",
@@ -350,7 +353,6 @@ const en: typeof pl = {
     // _few and _many as in badges.descriptions: never picked in English.
     loadError: "Couldn't load your friends.",
     retry: "Try again",
-    level: "Level {{level}}",
     tabs: {
       friends: "Friends",
       requests: "Requests",
@@ -378,6 +380,20 @@ const en: typeof pl = {
       submitting: "Sending...",
       sent: "Friend request sent",
       nowFriends: "They had invited you too. You're friends now!",
+    },
+    profile: {
+      back: "Friends",
+      remove: "Remove from friends",
+      removing: "Removing...",
+      removeTitle: "Remove from friends: {{name}}?",
+      removeMessage:
+        "They disappear from your list, and you from theirs. You can invite each other again at any time.",
+      removed: "Removed from friends: {{name}}",
+    },
+    badges: {
+      back: "Profile",
+      title: "Badges earned: {{count}}",
+      empty: "They haven't earned any badges yet.",
     },
     list: {
       title: "Your friends ({{count}})",

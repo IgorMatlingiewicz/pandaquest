@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
+import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { ChoiceChip } from "@/components/choice-chip";
 import { FriendsPanel } from "@/components/friends/friends-panel";
@@ -100,6 +101,12 @@ export default function FriendsScreen() {
                 regenerating={friends.regenerating}
                 onSend={friends.sendRequest}
                 onRegenerate={friends.regenerateCode}
+                onOpenFriend={(friend) =>
+                  router.push({
+                    pathname: "/friends/[friendshipId]",
+                    params: { friendshipId: friend.friendshipId },
+                  })
+                }
               />,
             )}
           </View>

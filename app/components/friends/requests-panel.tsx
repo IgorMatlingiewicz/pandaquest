@@ -51,7 +51,7 @@ function Who({ request }: { request: FriendRequest }) {
         {request.user.username}
       </Text>
       <Text size="sm" className="text-muted-foreground">
-        {t("friends.level", { level: request.user.level })}
+        {t("xp.level", { level: request.user.level })}
       </Text>
     </View>
   );
