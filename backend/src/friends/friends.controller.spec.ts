@@ -1,5 +1,7 @@
-import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
+import { GUARDS_METADATA, HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UserThrottlerGuard } from '../common/user-throttler.guard';
 import { FriendRequestsService } from './friend-requests.service';
 import { FriendsController } from './friends.controller';
 import { FriendsService } from './friends.service';
@@ -18,12 +20,16 @@ jest.mock('../prisma/prisma.service', () => ({
 
 type AuthedRequest = Parameters<FriendsController['getCode']>[0];
 
+const handlerOf = (method: keyof FriendsController) =>
+  Object.getOwnPropertyDescriptor(FriendsController.prototype, method)
+    ?.value as object;
+
 const httpCodeOf = (method: keyof FriendsController) =>
-  Reflect.getMetadata(
-    HTTP_CODE_METADATA,
-    Object.getOwnPropertyDescriptor(FriendsController.prototype, method)
-      ?.value as object,
-  ) as number | undefined;
+  Reflect.getMetadata(HTTP_CODE_METADATA, handlerOf(method)) as
+    number | undefined;
+
+const guardsOf = (target: object) =>
+  Reflect.getMetadata(GUARDS_METADATA, target) as unknown[] | undefined;
 
 describe('FriendsController', () => {
   const USER_ID = 'user-1';
@@ -52,13 +58,18 @@ describe('FriendsController', () => {
   beforeEach(async () => {
     jest.resetAllMocks();
 
+    // The real throttler guard needs ThrottlerModule's options and storage;
+    // the limit itself is tested over HTTP, in the e2e tests.
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FriendsController],
       providers: [
         { provide: FriendsService, useValue: friends },
         { provide: FriendRequestsService, useValue: requests },
       ],
-    }).compile();
+    })
+      .overrideGuard(UserThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(FriendsController);
   });
@@ -137,5 +148,31 @@ describe('FriendsController', () => {
     ['sendRequest', undefined],
   ] as const)('%s answers with %s', (route, status) => {
     expect(httpCodeOf(route)).toBe(status);
+  });
+
+  describe('guards', () => {
+    it('checks the token on the class, so before any route guard', () => {
+      expect(guardsOf(FriendsController)).toEqual([JwtAuthGuard]);
+    });
+
+    it('limits sending requests, counted per user', () => {
+      expect(guardsOf(handlerOf('sendRequest'))).toEqual([UserThrottlerGuard]);
+    });
+
+    it.each([
+      'getCode',
+      'regenerateCode',
+      'summary',
+      'listRequests',
+      'acceptRequest',
+      'declineRequest',
+      'cancelRequest',
+      'listFriends',
+      'friendProfile',
+      'friendBadges',
+      'removeFriend',
+    ] as const)('leaves %s without a limit', (route) => {
+      expect(guardsOf(handlerOf(route))).toBeUndefined();
+    });
   });
 });

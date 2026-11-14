@@ -1,4 +1,5 @@
 import {
+  FRIEND_REQUEST_RATE,
   MAX_FRIENDS,
   MAX_PENDING_OUTGOING,
   RESEND_COOLDOWN_MS,
@@ -14,5 +15,9 @@ describe('friends config', () => {
   it('allows 20 waiting requests and 100 friends', () => {
     expect(MAX_PENDING_OUTGOING).toBe(20);
     expect(MAX_FRIENDS).toBe(100);
+  });
+
+  it('lets one user send 10 requests a minute', () => {
+    expect(FRIEND_REQUEST_RATE).toEqual({ limit: 10, ttl: 60_000 });
   });
 });

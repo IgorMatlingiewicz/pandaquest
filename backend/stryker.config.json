@@ -26,6 +26,7 @@
   "mutate": [
     "src/badges/badges.logic.ts",
     "src/common/full-period.ts",
+    "src/common/user-throttler.guard.ts",
     "src/streak-goals/streak-goals.logic.ts",
     "src/stats/stats.logic.ts",
     "src/profile/profile.logic.ts",

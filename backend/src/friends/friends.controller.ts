@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UserThrottlerGuard } from '../common/user-throttler.guard';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 import { FriendRequestsService } from './friend-requests.service';
 import { FriendsService } from './friends.service';
@@ -47,7 +48,11 @@ export class FriendsController {
     return this.requestsService.summary(req.user.userId);
   }
 
+  // Limits guessing codes: 10 tries a minute per account, 429 after that.
+  // The class's JwtAuthGuard runs first (class guards before method
+  // guards), so the user is known here and counted by id, not by IP.
   @Post('requests')
+  @UseGuards(UserThrottlerGuard)
   sendRequest(
     @Request() req: AuthenticatedRequest,
     @Body() dto: SendFriendRequestDto,
