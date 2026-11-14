@@ -45,6 +45,12 @@ export const FRIEND_ERRORS = {
     status: HttpStatus.NOT_FOUND,
     message: 'Zaproszenie nie znalezione',
   },
+  // Not a friend of the user, or no such friendship: the same answer either
+  // way, so a stranger learns nothing about anyone (OWASP API1, BOLA).
+  FRIEND_NOT_FOUND: {
+    status: HttpStatus.NOT_FOUND,
+    message: 'Znajomy nie znaleziony',
+  },
 } as const satisfies Record<string, { status: HttpStatus; message: string }>;
 
 export type FriendErrorCode = keyof typeof FRIEND_ERRORS;

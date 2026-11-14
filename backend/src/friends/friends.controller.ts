@@ -82,4 +82,36 @@ export class FriendsController {
   cancelRequest(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.requestsService.cancel(req.user.userId, id);
   }
+
+  @Get()
+  listFriends(@Request() req: AuthenticatedRequest) {
+    return this.friendsService.list(req.user.userId);
+  }
+
+  // A friend is addressed by the friendship's id, never by their user id:
+  // the service then checks the token's user is on that friendship.
+  @Get(':friendshipId/profile')
+  friendProfile(
+    @Request() req: AuthenticatedRequest,
+    @Param('friendshipId') friendshipId: string,
+  ) {
+    return this.friendsService.profile(req.user.userId, friendshipId);
+  }
+
+  @Get(':friendshipId/badges')
+  friendBadges(
+    @Request() req: AuthenticatedRequest,
+    @Param('friendshipId') friendshipId: string,
+  ) {
+    return this.friendsService.badges(req.user.userId, friendshipId);
+  }
+
+  @Delete(':friendshipId')
+  @HttpCode(204)
+  removeFriend(
+    @Request() req: AuthenticatedRequest,
+    @Param('friendshipId') friendshipId: string,
+  ) {
+    return this.friendsService.remove(req.user.userId, friendshipId);
+  }
 }

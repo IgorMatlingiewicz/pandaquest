@@ -31,7 +31,14 @@ describe('FriendsController', () => {
     user: { userId: USER_ID, email: 'user@example.com' },
   } as AuthedRequest;
 
-  const friends = { getCode: jest.fn(), regenerateCode: jest.fn() };
+  const friends = {
+    getCode: jest.fn(),
+    regenerateCode: jest.fn(),
+    list: jest.fn(),
+    profile: jest.fn(),
+    badges: jest.fn(),
+    remove: jest.fn(),
+  };
   const requests = {
     send: jest.fn(),
     list: jest.fn(),
@@ -102,11 +109,31 @@ describe('FriendsController', () => {
     },
   );
 
+  it('lists the friends of the authenticated user only', async () => {
+    await controller.listFriends(req);
+
+    expect(friends.list).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it.each([
+    ['friendProfile', 'profile'],
+    ['friendBadges', 'badges'],
+    ['removeFriend', 'remove'],
+  ] as const)(
+    '%s acts on the friendship in the path as the authenticated user',
+    async (route, method) => {
+      await controller[route](req, 'friendship-7');
+
+      expect(friends[method]).toHaveBeenCalledWith(USER_ID, 'friendship-7');
+    },
+  );
+
   it.each([
     ['regenerateCode', 200],
     ['acceptRequest', 200],
     ['declineRequest', 200],
     ['cancelRequest', 204],
+    ['removeFriend', 204],
     ['sendRequest', undefined],
   ] as const)('%s answers with %s', (route, status) => {
     expect(httpCodeOf(route)).toBe(status);
