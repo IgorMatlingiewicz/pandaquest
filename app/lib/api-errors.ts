@@ -1,3 +1,4 @@
+import { resendValues } from "@/lib/friends";
 import { HttpError } from "@/lib/http-error";
 
 /*
@@ -86,4 +87,61 @@ export function createStreakGoalErrorKey(status: number): string {
   if (status === 400) return "streaks.invalidName";
   if (status === 409) return "streaks.limitReached";
   return "common.tryAgain";
+}
+
+/** Reading a friends screen failed. */
+export function friendsLoadErrorKey(status: number): string {
+  return status === 401 ? "common.sessionExpired" : "friends.loadError";
+}
+
+/**
+ * The refusal codes of backend/src/friends/friend-errors.ts with a text of
+ * their own. The cooldown is not here: its text needs availableAt.
+ */
+const FRIEND_ERROR_CODES = new Set([
+  "INVALID_FRIEND_CODE",
+  "CANNOT_ADD_SELF",
+  "ALREADY_FRIENDS",
+  "REQUEST_ALREADY_SENT",
+  "TOO_MANY_PENDING_REQUESTS",
+  "FRIEND_LIMIT_REACHED",
+  "REQUEST_NOT_FOUND",
+  "FRIEND_NOT_FOUND",
+]);
+
+/** A translation key, and the values its text needs, if any. */
+export type FriendFailure = {
+  key: string;
+  values?: { count: number; date: string };
+};
+
+/**
+ * Every failed action on the friends screens, in one place. The friends
+ * module names its refusals with a `code`, so the code decides here; the
+ * status only where there is no code: 429 from the rate limit, 401, and a
+ * code this app does not know yet (a newer server), which gets a general
+ * text instead of the server's own message.
+ */
+export function friendFailure(
+  error: unknown,
+  now: number,
+  language: string,
+): FriendFailure {
+  if (!(error instanceof HttpError)) return { key: "common.noConnection" };
+  if (error.status === 401) return { key: "common.sessionExpired" };
+  if (error.status === 429) return { key: "friends.errors.tooManyAttempts" };
+  if (error.code === "FRIEND_REQUEST_COOLDOWN") {
+    return error.availableAt
+      ? {
+          key: "friends.errors.FRIEND_REQUEST_COOLDOWN",
+          values: resendValues(error.availableAt, now, language),
+        }
+      : { key: "friends.errors.cooldownLater" };
+  }
+  if (error.code && FRIEND_ERROR_CODES.has(error.code)) {
+    return { key: `friends.errors.${error.code}` };
+  }
+  return {
+    key: error.status >= 500 ? "common.genericError" : "common.tryAgain",
+  };
 }

@@ -97,6 +97,58 @@ export type StreakGoalsResponse = {
   goals: StreakGoal[];
 };
 
+// Another user as the friends endpoints show them: never an email or an id
+// (PersonView in backend/src/friends/friend-views.ts).
+export type FriendPerson = { username: string; level: number };
+
+// One request in GET /friends/requests. Outgoing requests include declined
+// ones while their sender has to wait; resendAvailableAt says until when.
+export type FriendRequest = {
+  id: string;
+  user: FriendPerson;
+  status: "PENDING" | "DECLINED";
+  createdAt: string;
+  resendAvailableAt?: string;
+};
+
+export type FriendRequestsResponse = {
+  incoming: FriendRequest[];
+  outgoing: FriendRequest[];
+};
+
+// POST /friends/requests. autoAccepted: the other side had already asked,
+// so the two are friends at once.
+export type SendFriendRequestResult = {
+  id: string;
+  status: "PENDING" | "ACCEPTED";
+  autoAccepted: boolean;
+};
+
+// GET /friends/summary, for the count on the navigation link.
+export type FriendsSummary = {
+  friendsCount: number;
+  pendingIncomingCount: number;
+};
+
+// One friend in GET /friends; friendshipId addresses everything else.
+export type Friend = FriendPerson & { friendshipId: string };
+
+// GET /friends/:friendshipId/profile: the own profile without XP.
+export type FriendProfile = {
+  username: string;
+  joinedAt: string;
+  level: number;
+  badges: { earned: number; total: number };
+  favorites: (EarnedBadge | null)[];
+};
+
+// One badge in GET /friends/:friendshipId/badges: earned tiers only, lowest
+// first, and no progress (no `current`, no XP).
+export type FriendBadge = {
+  key: string;
+  tiers: { tier: BadgeTier; threshold: number; earnedAt: string }[];
+};
+
 // One day of GET /stats, in the user's timezone; date is 'yyyy-MM-dd'.
 export type ActivityDay = {
   date: string;

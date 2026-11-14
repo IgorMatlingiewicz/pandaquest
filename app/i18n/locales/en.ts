@@ -18,6 +18,7 @@ const en: typeof pl = {
     streaks: "Quit streaks",
     progress: "Progress",
     profile: "Profile",
+    friends: "Friends",
     menu: "Menu",
   },
   auth: {
@@ -334,6 +335,48 @@ const en: typeof pl = {
       wrongCurrent: "Your current password is incorrect.",
       tooWeak: "The new password must be at least 8 characters long.",
       sameAsCurrent: "The new password must be different from the current one.",
+    },
+  },
+  friends: {
+    // _few and _many as in badges.descriptions: never picked in English.
+    loadError: "Couldn't load your friends.",
+    add: {
+      sent: "Friend request sent",
+      nowFriends: "They had invited you too. You're friends now!",
+    },
+    requests: {
+      declinedUntil_one:
+        "Request declined. You can invite them again in {{count}} day ({{date}}).",
+      declinedUntil_few:
+        "Request declined. You can invite them again in {{count}} days ({{date}}).",
+      declinedUntil_many:
+        "Request declined. You can invite them again in {{count}} days ({{date}}).",
+      declinedUntil_other:
+        "Request declined. You can invite them again in {{count}} days ({{date}}).",
+    },
+    errors: {
+      INVALID_FRIEND_CODE:
+        "Nobody has this code. Check that you typed it correctly.",
+      CANNOT_ADD_SELF: "That's your own code.",
+      ALREADY_FRIENDS: "You're already friends.",
+      REQUEST_ALREADY_SENT: "Your request to them is already waiting.",
+      FRIEND_REQUEST_COOLDOWN_one:
+        "They declined your request. You can send a new one in {{count}} day ({{date}}).",
+      FRIEND_REQUEST_COOLDOWN_few:
+        "They declined your request. You can send a new one in {{count}} days ({{date}}).",
+      FRIEND_REQUEST_COOLDOWN_many:
+        "They declined your request. You can send a new one in {{count}} days ({{date}}).",
+      FRIEND_REQUEST_COOLDOWN_other:
+        "They declined your request. You can send a new one in {{count}} days ({{date}}).",
+      cooldownLater:
+        "They declined your request. You can send a new one later.",
+      TOO_MANY_PENDING_REQUESTS:
+        "Too many of your requests are waiting. Take one back to send a new one.",
+      FRIEND_LIMIT_REACHED:
+        "You or they already have the most friends allowed.",
+      REQUEST_NOT_FOUND: "This request is no longer valid.",
+      FRIEND_NOT_FOUND: "They are no longer your friend.",
+      tooManyAttempts: "Too many tries. Try again in a moment.",
     },
   },
 };
