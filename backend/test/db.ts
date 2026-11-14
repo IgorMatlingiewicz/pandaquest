@@ -21,6 +21,21 @@ export async function resetDatabase(prisma: PrismaService): Promise<void> {
   await prisma.$executeRawUnsafe(`TRUNCATE ${list} CASCADE`);
 }
 
+/**
+ * Deletes an account made by sign-up. Its tasks and categories go first: their
+ * foreign keys to users have no ON DELETE CASCADE, so Postgres refuses to
+ * delete a user who still has them. Everything else (friendships, badges,
+ * XP events, streak goals) cascades. Deleting accounts is not a feature yet;
+ * this is how a test makes a token's account disappear.
+ */
+export async function deleteAccount(prisma: PrismaService, userId: string) {
+  await prisma.$transaction([
+    prisma.task.deleteMany({ where: { userId } }),
+    prisma.category.deleteMany({ where: { userId } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+}
+
 /** A user row with only what the schema requires; tests add what they need. */
 export function createUser(
   prisma: PrismaService,

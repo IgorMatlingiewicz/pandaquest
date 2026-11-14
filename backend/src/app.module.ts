@@ -9,6 +9,7 @@ import { BadgesModule } from './badges/badges.module';
 import { StreakGoalsModule } from './streak-goals/streak-goals.module';
 import { StatsModule } from './stats/stats.module';
 import { ProfileModule } from './profile/profile.module';
+import { FriendsModule } from './friends/friends.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ProfileModule } from './profile/profile.module';
     StreakGoalsModule,
     StatsModule,
     ProfileModule,
+    FriendsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

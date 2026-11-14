@@ -14,13 +14,23 @@
   "tsconfigFile": "tsconfig.json",
   "coverageAnalysis": "perTest",
   "timeoutMS": 15000,
-  "ignorePatterns": ["/*", "!/src", "!/package.json", "!/tsconfig*.json"],
+  "ignorePatterns": [
+    "/*",
+    "!/src",
+    "!/prisma",
+    "/prisma/*",
+    "!/prisma/migrations",
+    "!/package.json",
+    "!/tsconfig*.json"
+  ],
   "mutate": [
     "src/badges/badges.logic.ts",
     "src/common/full-period.ts",
     "src/streak-goals/streak-goals.logic.ts",
     "src/stats/stats.logic.ts",
-    "src/profile/profile.logic.ts"
+    "src/profile/profile.logic.ts",
+    "src/friends/friend-code.ts",
+    "src/friends/friend-errors.ts"
   ],
   "reporters": ["clear-text", "progress", "html"],
   "htmlReporter": { "fileName": "reports/mutation/mutation.html" },

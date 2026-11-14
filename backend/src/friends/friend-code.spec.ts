@@ -1,4 +1,6 @@
 import { randomInt } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { uniqueViolation } from '../testing/prisma-errors';
 import {
   FRIEND_CODE_ALPHABET,
@@ -110,6 +112,22 @@ describe('friend code', () => {
     });
   });
 
+  describe('FRIEND_CODE_INDEX', () => {
+    it('is the name the migrations give the unique index on friendCode', () => {
+      const migrations = join(__dirname, '../../prisma/migrations');
+      const sql = readdirSync(migrations)
+        .filter((name) => /^\d/.test(name))
+        .map((name) =>
+          readFileSync(join(migrations, name, 'migration.sql'), 'utf8'),
+        )
+        .join('\n');
+
+      expect(sql).toContain(
+        `CREATE UNIQUE INDEX "${FRIEND_CODE_INDEX}" ON "users"("friendCode")`,
+      );
+    });
+  });
+
   describe('withFreshFriendCode', () => {
     // Codes handed out in order, so each attempt's code can be checked.
     const codes = () => {
@@ -143,14 +161,27 @@ describe('friend code', () => {
       ]);
     });
 
-    it(`gives up after ${FRIEND_CODE_ATTEMPTS} taken codes`, async () => {
-      const write = jest.fn(() =>
-        Promise.reject(uniqueViolation(FRIEND_CODE_INDEX)),
+    it(`gives up after ${FRIEND_CODE_ATTEMPTS} taken codes, keeping the last refusal`, async () => {
+      const last = uniqueViolation(FRIEND_CODE_INDEX);
+      const write = jest
+        .fn<Promise<string>, [string]>()
+        .mockRejectedValue(uniqueViolation(FRIEND_CODE_INDEX))
+        .mockRejectedValueOnce(uniqueViolation(FRIEND_CODE_INDEX))
+        .mockRejectedValueOnce(uniqueViolation(FRIEND_CODE_INDEX))
+        .mockRejectedValueOnce(uniqueViolation(FRIEND_CODE_INDEX))
+        .mockRejectedValueOnce(uniqueViolation(FRIEND_CODE_INDEX))
+        .mockRejectedValueOnce(last);
+
+      const error = await withFreshFriendCode(write, codes()).catch(
+        (e: unknown) => e,
       );
 
-      await expect(withFreshFriendCode(write, codes())).rejects.toThrow(
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(
         `No free friend code after ${FRIEND_CODE_ATTEMPTS} draws`,
       );
+      // For the logs: what the database said the last time.
+      expect((error as Error).cause).toBe(last);
       expect(write).toHaveBeenCalledTimes(FRIEND_CODE_ATTEMPTS);
     });
 
