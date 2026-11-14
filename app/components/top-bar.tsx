@@ -64,24 +64,40 @@ function Settings() {
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
 
+  // Buttons for a screen reader too: a role, and a name that says what a
+  // press does. Without one, the theme switch was named by its icon's font
+  // glyph on the web, and the language switch by "PL" alone. 44×44 at
+  // least, as hitSlop does not reach the web.
+  const target = "min-h-11 min-w-11 items-center justify-center";
   return (
-    <HStack space="md" className="items-center">
+    <HStack space="xs" className="items-center">
       <Pressable
         onPress={() => changeLanguage(language === "pl" ? "en" : "pl")}
-        hitSlop={8}
+        role="button"
+        aria-label={t(
+          language === "pl" ? "nav.switchToEnglish" : "nav.switchToPolish",
+        )}
+        className={target}
       >
         <Text className="text-muted-foreground">
           {language === "pl" ? "PL" : "EN"}
         </Text>
       </Pressable>
-      <Pressable onPress={toggleColorScheme} hitSlop={8}>
+      <Pressable
+        onPress={toggleColorScheme}
+        role="button"
+        aria-label={t(
+          colorScheme === "dark" ? "nav.lightTheme" : "nav.darkTheme",
+        )}
+        className={target}
+      >
         <MaterialCommunityIcons
           name={colorScheme === "dark" ? "weather-sunny" : "weather-night"}
           size={20}
           color="#999"
         />
       </Pressable>
-      <Pressable onPress={logout}>
+      <Pressable onPress={logout} role="button" className={target}>
         <Text className="text-blue-500">{t("common.logout")}</Text>
       </Pressable>
     </HStack>

@@ -8,6 +8,7 @@ import {
   friendsLoadErrorKey,
   type FriendFailure,
 } from "@/lib/api-errors";
+import { onAppReturn } from "@/lib/app-return";
 import { sentRequestKey } from "@/lib/friends";
 import {
   acceptFriendRequest,
@@ -99,9 +100,13 @@ export function useFriends() {
     }
   }, [token]);
 
+  // On every visit, and on coming back to the app while the screen is on
+  // top. The return listener goes with the focus, so a hidden friends
+  // screen sends nothing.
   useFocusEffect(
     useCallback(() => {
       refresh();
+      return onAppReturn(refresh);
     }, [refresh]),
   );
 

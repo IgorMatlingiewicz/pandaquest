@@ -98,6 +98,10 @@ describe("friends texts", () => {
     sentRequestKey({ id: "r", status: "ACCEPTED", autoAccepted: true }),
     "friends.requests.declinedUntil",
     "nav.friends",
+    "nav.switchToEnglish",
+    "nav.switchToPolish",
+    "nav.darkTheme",
+    "nav.lightTheme",
   ]);
 
   // count: 2 picks a plural form, so keys made only of plurals exist too.

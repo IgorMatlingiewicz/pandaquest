@@ -4,6 +4,7 @@ import { useFriendsSummary } from "@/context/FriendsSummaryContext";
 import { useFriends, type SendOutcome } from "@/hooks/use-friends";
 import type { FriendFailure } from "@/lib/api-errors";
 import type { Friend, FriendRequestsResponse } from "@/types/api";
+import { fakeAppState } from "./fake-app-state";
 import { fakeServer, type PendingRequest } from "./fake-server";
 
 jest.mock("@/context/AuthContext", () => ({ useAuth: jest.fn() }));
@@ -166,6 +167,35 @@ describe("useFriends", () => {
         status: "ready",
         data: { friends: [ALA] },
       });
+    });
+
+    it("reads again when the app comes back while the screen is on top", async () => {
+      const app = fakeAppState("active");
+      const { result } = await open();
+
+      await app.goTo("background");
+      expect(readCount()).toBe(1);
+      await app.goTo("active");
+      expect(readCount()).toBe(2);
+
+      await answerRead(1, { requests: NO_REQUESTS });
+      expect(result.current.state).toMatchObject({
+        data: { requests: NO_REQUESTS },
+      });
+    });
+
+    it("stops listening for returns once the screen is left", async () => {
+      const app = fakeAppState("active");
+      const { unmount } = await open();
+      expect(app.listening()).toBe(1);
+
+      // Focus stands for being mounted here, so leaving is unmounting.
+      unmount();
+      await app.goTo("background");
+      await app.goTo("active");
+
+      expect(app.listening()).toBe(0);
+      expect(readCount()).toBe(1);
     });
 
     it("ignores an older answer that comes back after a newer one", async () => {

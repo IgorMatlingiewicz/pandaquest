@@ -26,6 +26,10 @@ export default {
     menuWithRequests_few: "Menu, {{count}} nowe zaproszenia",
     menuWithRequests_many: "Menu, {{count}} nowych zaproszeń",
     menuWithRequests_other: "Menu, {{count}} nowych zaproszeń",
+    switchToEnglish: "Zmień język na angielski",
+    switchToPolish: "Zmień język na polski",
+    darkTheme: "Włącz ciemny motyw",
+    lightTheme: "Włącz jasny motyw",
   },
   auth: {
     email: "Email",

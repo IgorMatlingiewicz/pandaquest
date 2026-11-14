@@ -8,6 +8,7 @@ import {
 } from "react";
 import { usePathname } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { onAppReturn } from "@/lib/app-return";
 import { fetchFriendsSummary } from "@/lib/friends-api";
 
 type FriendsSummaryContextType = {
@@ -24,7 +25,8 @@ const FriendsSummaryContext = createContext<
 /*
  * The count of waiting requests for the navigation, which is always on
  * screen. No polling in the background: it is read whenever the page
- * changes, and after every action on the friends screens. A failed read
+ * changes, when the app comes back to the front, and after every action
+ * on the friends screens. A failed read
  * keeps the last count: it is a hint, and a missing connection already
  * shows on the page itself.
  */
@@ -55,6 +57,10 @@ export function FriendsSummaryProvider({
   useEffect(() => {
     refresh();
   }, [pathname, refresh]);
+
+  // Back from another app or browser tab: the page did not change, but a
+  // request may have come in meanwhile.
+  useEffect(() => onAppReturn(refresh), [refresh]);
 
   return (
     <FriendsSummaryContext.Provider value={{ pendingIncoming, refresh }}>

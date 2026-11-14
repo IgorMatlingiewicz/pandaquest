@@ -29,6 +29,10 @@ const en: typeof pl = {
     menuWithRequests_few: "Menu, {{count}} new requests",
     menuWithRequests_many: "Menu, {{count}} new requests",
     menuWithRequests_other: "Menu, {{count}} new requests",
+    switchToEnglish: "Switch language to English",
+    switchToPolish: "Switch language to Polish",
+    darkTheme: "Turn on dark theme",
+    lightTheme: "Turn on light theme",
   },
   auth: {
     email: "Email",

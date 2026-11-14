@@ -5,6 +5,7 @@ import {
   FriendsSummaryProvider,
   useFriendsSummary,
 } from "@/context/FriendsSummaryContext";
+import { fakeAppState } from "../hooks/fake-app-state";
 import { fakeServer, type PendingRequest } from "../hooks/fake-server";
 
 jest.mock("@/context/AuthContext", () => ({ useAuth: jest.fn() }));
@@ -62,6 +63,31 @@ describe("FriendsSummaryProvider", () => {
     await reads()[1].succeed(summary(0));
 
     expect(result.current.pendingIncoming).toBe(0);
+  });
+
+  it("reads again when the app comes back from the background, and only then", async () => {
+    const app = fakeAppState("active");
+    const { result } = render();
+    await reads()[0].succeed(summary(0));
+
+    await app.goTo("background");
+    expect(reads()).toHaveLength(1);
+
+    await app.goTo("active");
+    expect(reads()).toHaveLength(2);
+    await reads()[1].succeed(summary(2));
+    expect(result.current.pendingIncoming).toBe(2);
+  });
+
+  it("stops listening for returns when the provider goes", async () => {
+    const app = fakeAppState("active");
+    const { unmount } = render();
+    await reads()[0].succeed(summary(0));
+    expect(app.listening()).toBe(1);
+
+    unmount();
+
+    expect(app.listening()).toBe(0);
   });
 
   it("keeps the last count when a read fails", async () => {
