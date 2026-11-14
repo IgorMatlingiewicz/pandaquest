@@ -4,7 +4,8 @@ export type PendingRequest = {
   url: string;
   init: RequestInit | undefined;
   succeed: (body?: unknown, status?: number) => Promise<void>;
-  refuse: (status: number) => Promise<void>;
+  // body: what the refusal says, e.g. { code } from the friends module.
+  refuse: (status: number, body?: object) => Promise<void>;
   drop: () => Promise<void>;
 };
 
@@ -39,9 +40,9 @@ export function fakeServer() {
                 },
               }),
             ),
-          refuse: (status) =>
+          refuse: (status, body = {}) =>
             settle(() =>
-              resolve({ ok: false, status, json: async () => ({}) }),
+              resolve({ ok: false, status, json: async () => body }),
             ),
           drop: () =>
             settle(() => reject(new TypeError("Network request failed"))),
