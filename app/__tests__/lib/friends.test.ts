@@ -1,7 +1,9 @@
 import {
   FRIEND_CODE_ALPHABET,
   FRIEND_CODE_LENGTH,
+  badgeText,
   daysUntil,
+  spelledFriendCode,
   formatFriendCode,
   friendCodeChars,
   isCompleteFriendCode,
@@ -94,6 +96,29 @@ describe("resendValues", () => {
     const later = Date.parse("2026-11-22T12:00:00.000Z");
 
     expect(resendValues(IN_A_WEEK, later, "pl").count).toBe(1);
+  });
+});
+
+describe("badgeText", () => {
+  it.each([
+    [1, "1"],
+    [12, "12"],
+    [99, "99"],
+    [100, "99+"],
+    [250, "99+"],
+  ])("shows %i as %s", (count, text) => {
+    expect(badgeText(count)).toBe(text);
+  });
+});
+
+describe("spelledFriendCode", () => {
+  it.each([
+    ["ABCDEFGH", "A B C D, E F G H"],
+    ["ABCD-EFGH", "A B C D, E F G H"], // the shown form reads the same
+    ["ABC", "A B C"], // no pause after a half that is not there
+    ["", ""],
+  ])("spells %j as %j", (code, spelled) => {
+    expect(spelledFriendCode(code)).toBe(spelled);
   });
 });
 

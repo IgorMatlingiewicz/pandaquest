@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   FadeInUp,
@@ -12,7 +12,8 @@ import { TabTrigger } from "expo-router/ui";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { useAppColorScheme } from "@/context/ColorSchemeContext";
-import { useIsWide } from "@/hooks/use-is-wide";
+import { useFriendsSummary } from "@/context/FriendsSummaryContext";
+import { NAV_INLINE, TOP_BAR_NAME_MAX_WIDTH } from "@/constants/layout";
 import { useLanguage } from "@/hooks/use-language";
 import { LevelBar } from "@/components/level-bar";
 import { NavItem } from "@/components/nav-item";
@@ -28,6 +29,7 @@ const PAGES_WITHOUT_LEVEL_BAR = ["/profile"];
 
 function NavLinks() {
   const { t } = useTranslation();
+  const { pendingIncoming } = useFriendsSummary();
 
   return (
     <>
@@ -42,6 +44,15 @@ function NavLinks() {
       </TabTrigger>
       <TabTrigger name="profile" asChild>
         <NavItem label={t("nav.profile")} icon="account-outline" />
+      </TabTrigger>
+      {/* reset: pressed from a friend's profile, it goes back to the list. */}
+      <TabTrigger name="friends" reset="always" asChild>
+        <NavItem
+          label={t("nav.friends")}
+          icon="account-multiple-outline"
+          badge={pendingIncoming}
+          badgeLabel={t("nav.friendsWithRequests", { count: pendingIncoming })}
+        />
       </TabTrigger>
     </>
   );
@@ -79,11 +90,17 @@ function Settings() {
 
 export function TopBar() {
   const insets = useSafeAreaInsets();
-  const isWide = useIsWide();
+  // Links in the bar only from NAV_INLINE: at the cards' "wide" width they
+  // did not fit next to the user's name and the settings.
+  const inline = useWindowDimensions().width >= NAV_INLINE;
   const { user } = useAuth();
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { pendingIncoming } = useFriendsSummary();
+  // With the menu closed, the count on the friends link cannot be seen, so
+  // the menu button carries a dot for it.
+  const menuDot = !menuOpen && pendingIncoming > 0;
   const levelProgress = PAGES_WITHOUT_LEVEL_BAR.includes(pathname)
     ? null
     : user?.levelProgress;
@@ -91,7 +108,7 @@ export function TopBar() {
   // Picking a page closes the menu, and so does growing the window wide.
   useEffect(() => {
     setMenuOpen(false);
-  }, [pathname, isWide]);
+  }, [pathname, inline]);
 
   return (
     // shrink-0: on web this is a flex item, and a long page below would
@@ -102,12 +119,16 @@ export function TopBar() {
     >
       <HStack className="items-center justify-between">
         <HStack space="md" className="items-center">
-          {!isWide && (
+          {!inline && (
             <Pressable
               onPress={() => setMenuOpen((open) => !open)}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={t("nav.menu")}
+              accessibilityLabel={
+                menuDot
+                  ? t("nav.menuWithRequests", { count: pendingIncoming })
+                  : t("nav.menu")
+              }
               accessibilityState={{ expanded: menuOpen }}
             >
               <MaterialCommunityIcons
@@ -115,12 +136,15 @@ export function TopBar() {
                 size={24}
                 color="#999"
               />
+              {menuDot && (
+                <View className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-blue-600" />
+              )}
             </Pressable>
           )}
           <Text size="lg" bold>
             PandaQuest
           </Text>
-          {isWide && (
+          {inline && (
             <HStack space="xs" className="items-center ml-4">
               <NavLinks />
             </HStack>
@@ -128,12 +152,18 @@ export function TopBar() {
         </HStack>
 
         <HStack space="md" className="items-center">
-          <Text className="text-muted-foreground">{user?.username}</Text>
-          {isWide && <Settings />}
+          <Text
+            className="text-muted-foreground"
+            isTruncated
+            style={{ maxWidth: TOP_BAR_NAME_MAX_WIDTH }}
+          >
+            {user?.username}
+          </Text>
+          {inline && <Settings />}
         </HStack>
       </HStack>
 
-      {!isWide && menuOpen && (
+      {!inline && menuOpen && (
         // Slides down a little while fading in; the level bar below moves
         // with it instead of jumping. Both follow the system "reduce motion"
         // setting.

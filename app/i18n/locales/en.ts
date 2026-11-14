@@ -19,7 +19,16 @@ const en: typeof pl = {
     progress: "Progress",
     profile: "Profile",
     friends: "Friends",
+    // _few and _many as in badges.descriptions: never picked in English.
+    friendsWithRequests_one: "Friends, {{count}} new request",
+    friendsWithRequests_few: "Friends, {{count}} new requests",
+    friendsWithRequests_many: "Friends, {{count}} new requests",
+    friendsWithRequests_other: "Friends, {{count}} new requests",
     menu: "Menu",
+    menuWithRequests_one: "Menu, {{count}} new request",
+    menuWithRequests_few: "Menu, {{count}} new requests",
+    menuWithRequests_many: "Menu, {{count}} new requests",
+    menuWithRequests_other: "Menu, {{count}} new requests",
   },
   auth: {
     email: "Email",
@@ -340,11 +349,54 @@ const en: typeof pl = {
   friends: {
     // _few and _many as in badges.descriptions: never picked in English.
     loadError: "Couldn't load your friends.",
+    retry: "Try again",
+    level: "Level {{level}}",
+    tabs: {
+      friends: "Friends",
+      requests: "Requests",
+      requestsCount: "Requests ({{count}})",
+    },
+    code: {
+      title: "Your code",
+      hint: "Give it to a friend so they can invite you.",
+      label: "Your friend code: {{spelled}}",
+      copy: "Copy",
+      copied: "Code copied",
+      copyFailed: "Couldn't copy the code",
+      regenerate: "Get a new one",
+      regenerating: "Generating...",
+      regenerated: "You have a new code",
+      confirmTitle: "Get a new code?",
+      confirmMessage:
+        "Your current code stops working at once: whoever has it can no longer invite you with it.",
+      confirmNote: "Your friends and requests stay as they are.",
+    },
     add: {
+      title: "Add a friend",
+      label: "Friend's code",
+      submit: "Send request",
+      submitting: "Sending...",
       sent: "Friend request sent",
       nowFriends: "They had invited you too. You're friends now!",
     },
+    list: {
+      title: "Your friends ({{count}})",
+      empty: "No friends yet. Give someone your code or enter a friend's code.",
+      open: "{{name}}, level {{level}}. Open profile.",
+    },
     requests: {
+      incoming: "Received",
+      outgoing: "Sent",
+      incomingEmpty: "No new requests.",
+      outgoingEmpty: "You're not waiting for any answer.",
+      accept: "Accept",
+      decline: "Decline",
+      cancel: "Take back",
+      acceptFrom: "Accept request from: {{name}}",
+      declineFrom: "Decline request from: {{name}}",
+      cancelTo: "Take back request to: {{name}}",
+      waiting: "Waiting for an answer",
+      accepted: "You and {{name}} are friends now",
       declinedUntil_one:
         "Request declined. You can invite them again in {{count}} day ({{date}}).",
       declinedUntil_few:

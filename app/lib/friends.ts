@@ -70,6 +70,23 @@ export function resendValues(
   };
 }
 
+/** A count in a small pill: up to 99, then "99+", so the pill keeps its size. */
+export function badgeText(count: number): string {
+  return count > 99 ? "99+" : `${count}`;
+}
+
+/**
+ * The code as a screen reader should say it: letter by letter, a pause
+ * between the halves ("A B C D, E F G H"), not as one unreadable word.
+ */
+export function spelledFriendCode(code: string): string {
+  const chars = friendCodeChars(code);
+  return [chars.slice(0, GROUP), chars.slice(GROUP)]
+    .filter(Boolean)
+    .map((half) => [...half].join(" "))
+    .join(", ");
+}
+
 /** What the sender is told after a request went through. */
 export function sentRequestKey(result: SendFriendRequestResult): string {
   return result.autoAccepted ? "friends.add.nowFriends" : "friends.add.sent";

@@ -44,6 +44,22 @@ describe("friends texts", () => {
     ).toContain(words);
   });
 
+  it.each([
+    [1, "Znajomi, 1 nowe zaproszenie"],
+    [3, "Znajomi, 3 nowe zaproszenia"],
+    [5, "Znajomi, 5 nowych zaproszeń"],
+    [22, "Znajomi, 22 nowe zaproszenia"],
+    [25, "Znajomi, 25 nowych zaproszeń"],
+  ])("name %i waiting requests on the nav link in Polish", (count, text) => {
+    expect(i18n.t("nav.friendsWithRequests", { count })).toBe(text);
+  });
+
+  it("names waiting requests on the menu button in English", () => {
+    expect(i18n.getFixedT("en")("nav.menuWithRequests", { count: 2 })).toBe(
+      "Menu, 2 new requests",
+    );
+  });
+
   // Every key the friends functions can return has a text in both languages.
   const codes = [
     "INVALID_FRIEND_CODE",
