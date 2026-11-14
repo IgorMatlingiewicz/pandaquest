@@ -13,6 +13,7 @@ describe('friendError', () => {
     ['FRIEND_REQUEST_COOLDOWN', 409, 'Conflict'],
     ['TOO_MANY_PENDING_REQUESTS', 409, 'Conflict'],
     ['FRIEND_LIMIT_REACHED', 409, 'Conflict'],
+    ['REQUEST_NOT_FOUND', 404, 'Not Found'],
   ])('answers %s with %i', (code, status, error) => {
     const exception = friendError(code);
 

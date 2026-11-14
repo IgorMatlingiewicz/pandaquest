@@ -39,6 +39,12 @@ export const FRIEND_ERRORS = {
     status: HttpStatus.CONFLICT,
     message: 'Osiągnięto limit znajomych',
   },
+  // Someone else's request, or one no longer waiting: the same answer as
+  // none at all, so nobody learns of other people's requests (404, not 403).
+  REQUEST_NOT_FOUND: {
+    status: HttpStatus.NOT_FOUND,
+    message: 'Zaproszenie nie znalezione',
+  },
 } as const satisfies Record<string, { status: HttpStatus; message: string }>;
 
 export type FriendErrorCode = keyof typeof FRIEND_ERRORS;

@@ -1,5 +1,6 @@
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FriendRequestsService } from './friend-requests.service';
 import { FriendsController } from './friends.controller';
 import { FriendsService } from './friends.service';
 
@@ -17,13 +18,28 @@ jest.mock('../prisma/prisma.service', () => ({
 
 type AuthedRequest = Parameters<FriendsController['getCode']>[0];
 
+const httpCodeOf = (method: keyof FriendsController) =>
+  Reflect.getMetadata(
+    HTTP_CODE_METADATA,
+    Object.getOwnPropertyDescriptor(FriendsController.prototype, method)
+      ?.value as object,
+  ) as number | undefined;
+
 describe('FriendsController', () => {
   const USER_ID = 'user-1';
   const req = {
     user: { userId: USER_ID, email: 'user@example.com' },
   } as AuthedRequest;
 
-  const service = { getCode: jest.fn(), regenerateCode: jest.fn() };
+  const friends = { getCode: jest.fn(), regenerateCode: jest.fn() };
+  const requests = {
+    send: jest.fn(),
+    list: jest.fn(),
+    accept: jest.fn(),
+    decline: jest.fn(),
+    cancel: jest.fn(),
+    summary: jest.fn(),
+  };
   let controller: FriendsController;
 
   beforeEach(async () => {
@@ -31,33 +47,68 @@ describe('FriendsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FriendsController],
-      providers: [{ provide: FriendsService, useValue: service }],
+      providers: [
+        { provide: FriendsService, useValue: friends },
+        { provide: FriendRequestsService, useValue: requests },
+      ],
     }).compile();
 
     controller = module.get(FriendsController);
   });
 
   it('reads the code of the authenticated user only', async () => {
-    service.getCode.mockResolvedValue({ code: 'ABCDEFGH' });
+    friends.getCode.mockResolvedValue({ code: 'ABCDEFGH' });
 
     await expect(controller.getCode(req)).resolves.toEqual({
       code: 'ABCDEFGH',
     });
-    expect(service.getCode).toHaveBeenCalledWith(USER_ID);
+    expect(friends.getCode).toHaveBeenCalledWith(USER_ID);
   });
 
   it('draws a new code for the authenticated user only', async () => {
     await controller.regenerateCode(req);
 
-    expect(service.regenerateCode).toHaveBeenCalledWith(USER_ID);
+    expect(friends.regenerateCode).toHaveBeenCalledWith(USER_ID);
   });
 
-  it('answers a new code with 200, not 201', () => {
-    const handler = Object.getOwnPropertyDescriptor(
-      FriendsController.prototype,
-      'regenerateCode',
-    )?.value as object;
+  it('sends a request from the authenticated user with the code typed', async () => {
+    await controller.sendRequest(req, { code: 'abcd-efgh' });
 
-    expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(200);
+    expect(requests.send).toHaveBeenCalledWith(USER_ID, 'abcd-efgh');
+  });
+
+  it.each([
+    ['listRequests', 'list'],
+    ['summary', 'summary'],
+  ] as const)(
+    '%s reads for the authenticated user only',
+    async (route, method) => {
+      await controller[route](req);
+
+      expect(requests[method]).toHaveBeenCalledWith(USER_ID);
+    },
+  );
+
+  it.each([
+    ['acceptRequest', 'accept'],
+    ['declineRequest', 'decline'],
+    ['cancelRequest', 'cancel'],
+  ] as const)(
+    '%s acts on the request in the path as the authenticated user',
+    async (route, method) => {
+      await controller[route](req, 'request-9');
+
+      expect(requests[method]).toHaveBeenCalledWith(USER_ID, 'request-9');
+    },
+  );
+
+  it.each([
+    ['regenerateCode', 200],
+    ['acceptRequest', 200],
+    ['declineRequest', 200],
+    ['cancelRequest', 204],
+    ['sendRequest', undefined],
+  ] as const)('%s answers with %s', (route, status) => {
+    expect(httpCodeOf(route)).toBe(status);
   });
 });

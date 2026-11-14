@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -30,6 +31,19 @@ export function signUp(
     password: PASSWORD,
     timezone: 'Europe/Warsaw',
   });
+}
+
+/**
+ * A Bearer header for a user made straight in the database, signed by the
+ * app's own JwtService, as login would. Skips sign-up's password hashing,
+ * for tests that need many accounts.
+ */
+export function bearerFor(
+  app: INestApplication<App>,
+  user: { id: string; email: string },
+) {
+  const token = app.get(JwtService).sign({ sub: user.id, email: user.email });
+  return { Authorization: `Bearer ${token}` };
 }
 
 /** A signed-up, logged-in account: its id and a Bearer header to send. */
