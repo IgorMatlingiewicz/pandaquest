@@ -27,7 +27,7 @@ describe('TutorialController', () => {
   const req = {
     user: { userId: USER_ID, email: 'user@example.com' },
   } as AuthedRequest;
-  const tutorial = { dismiss: jest.fn() };
+  const tutorial = { dismiss: jest.fn(), complete: jest.fn() };
   let controller: TutorialController;
 
   beforeEach(async () => {
@@ -48,11 +48,25 @@ describe('TutorialController', () => {
     expect(tutorial.dismiss).toHaveBeenCalledWith(USER_ID);
   });
 
-  it('answers 200, as nothing is created', () => {
-    expect(Reflect.getMetadata(HTTP_CODE_METADATA, handlerOf('dismiss'))).toBe(
-      200,
-    );
+  it('completes for the authenticated user only, with the service answer', async () => {
+    const answer = {
+      tutorialStatus: 'COMPLETED',
+      badgesEarned: [{ key: 'bright_start', tier: 'BRONZE', xp: 10 }],
+    };
+    tutorial.complete.mockResolvedValue(answer);
+
+    await expect(controller.complete(req)).resolves.toEqual(answer);
+    expect(tutorial.complete).toHaveBeenCalledWith(USER_ID);
   });
+
+  it.each(['dismiss', 'complete'] as const)(
+    '%s answers 200, as nothing is created',
+    (route) => {
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handlerOf(route))).toBe(
+        200,
+      );
+    },
+  );
 
   it('checks the token on every route', () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, TutorialController)).toEqual([

@@ -67,6 +67,35 @@ describe('badge catalog', () => {
   );
 });
 
+describe('the catalog size', () => {
+  // Every tier counts in "badges: X of Y" (profile, friend's profile,
+  // achievements). Pinned, so a badge added or removed shows up here and
+  // the change is deliberate.
+  it('has 27 tiers in all', () => {
+    const tiers = BADGES.reduce((sum, badge) => sum + badge.tiers.length, 0);
+    expect(tiers).toBe(27);
+  });
+});
+
+describe('bright_start', () => {
+  const badge = BADGES.find((b) => b.key === 'bright_start')!;
+
+  it('is one Bronze tier for finishing the tutorial, worth 10 XP', () => {
+    expect(badge).toEqual({
+      key: 'bright_start',
+      metric: 'tutorialCompleted',
+      tiers: [{ tier: 'BRONZE', threshold: 1, xp: 10 }],
+    });
+    expect(tierXp(badge.tiers[0])).toBe(10);
+    expect(isEventMetric(badge.metric)).toBe(true);
+  });
+
+  it('stands with the starter badges, right after first_week', () => {
+    const keys = BADGES.map((b) => b.key);
+    expect(keys.indexOf('bright_start')).toBe(keys.indexOf('first_week') + 1);
+  });
+});
+
 describe('isEventMetric', () => {
   it('tells event metrics from counted ones', () => {
     expect(isEventMetric('lifeGoalCompleted')).toBe(true);

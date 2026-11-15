@@ -111,6 +111,19 @@ export class BadgesService {
   }
 
   /**
+   * After the user finished the onboarding tutorial. The one trigger of
+   * bright_start; as every award, it is stored at most once, so calling
+   * this again earns nothing.
+   */
+  async onTutorialCompleted(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    now: Date,
+  ): Promise<BadgeAward[]> {
+    return this.award(tx, userId, { tutorialCompleted: 1 }, () => now);
+  }
+
+  /**
    * After streak goals were synced, or before an attempt is closed: `goals`
    * have to show the attempts as they ran up to `now`. A tier may have been
    * reached long before anyone looked, so it is dated by that moment, not by

@@ -21,4 +21,12 @@ export class TutorialController {
   dismiss(@Request() req: AuthenticatedRequest) {
     return this.tutorialService.dismiss(req.user.userId);
   }
+
+  // { tutorialStatus, badgesEarned }: the shape the app's reward queue
+  // already takes from other responses (e.g. POST /categories).
+  @Post('complete')
+  @HttpCode(200)
+  complete(@Request() req: AuthenticatedRequest) {
+    return this.tutorialService.complete(req.user.userId);
+  }
 }

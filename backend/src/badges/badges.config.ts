@@ -36,11 +36,16 @@ export const CYCLE_METRICS: Record<
   WEEKLY: { total: 'weeklyTotal', streak: 'weeklyStreak' },
 };
 
-/** 0 or 1, read from the event that triggered the evaluation. */
+/**
+ * 0 or 1, read from the event that triggered the evaluation. Only the
+ * trigger that owns an event passes its metric, so no other trigger can
+ * earn its badge: tutorialCompleted comes from POST /tutorial/complete only.
+ */
 export const EVENT_METRICS = [
   'lifeGoalCompleted',
   'ownCategoryTaskCompleted',
   'ownCategoryAllDone',
+  'tutorialCompleted',
 ] as const;
 
 export type EventMetric = (typeof EVENT_METRICS)[number];
@@ -130,6 +135,15 @@ export const BADGES: readonly BadgeDefinition[] = [
     tiers: [{ tier: 'BRONZE', threshold: 1 }],
   },
   {
+    // "Jasny początek" / "Bright Start": finishing the onboarding tutorial,
+    // once per account. With the starter badges, so the achievements screen
+    // shows it next to first_day and first_week. 10 XP: a thank-you for
+    // reading, not an achievement worth a Bronze's 50.
+    key: 'bright_start',
+    metric: 'tutorialCompleted',
+    tiers: [{ tier: 'BRONZE', threshold: 1, xp: 10 }],
+  },
+  {
     key: 'own_category_first_task',
     metric: 'ownCategoryTaskCompleted',
     tiers: [{ tier: 'BRONZE', threshold: 1 }],
@@ -157,8 +171,6 @@ export const BADGES: readonly BadgeDefinition[] = [
       { tier: 'DIAMOND', threshold: 365 },
     ],
   },
-  // Planned, not added yet because its module does not exist:
-  // - tutorial: BRONZE for finishing the onboarding tutorial (event).
 ];
 
 /** What earning this tier is worth: its own override, else the XP table. */

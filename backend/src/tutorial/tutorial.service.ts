@@ -1,4 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import type { BadgeAward } from '../badges/badges.logic';
+import { BadgesService } from '../badges/badges.service';
 import type { Prisma, TutorialStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TUTORIAL_MOVES, type TutorialAction } from './tutorial.logic';
@@ -10,7 +12,10 @@ import { TUTORIAL_MOVES, type TutorialAction } from './tutorial.logic';
  */
 @Injectable()
 export class TutorialService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly badges: BadgesService,
+  ) {}
 
   /** "Skip": NOT_STARTED → DISMISSED; any other status stays as it is. */
   async dismiss(userId: string): Promise<{ tutorialStatus: TutorialStatus }> {
@@ -18,6 +23,36 @@ export class TutorialService {
       this.move(tx, userId, 'dismiss'),
     );
     return { tutorialStatus };
+  }
+
+  /**
+   * The tutorial watched to the end: COMPLETED, and the bright_start badge
+   * with its XP the first time. Status, badge, XP event and level change in
+   * one transaction, so none of them is stored without the others.
+   *
+   * Trust (documentation, section 6): the server cannot tell that the
+   * tutorial was really watched; finishing it is reported by the app. A
+   * request sent by hand earns the badge without the tutorial. Accepted,
+   * as for every badge (badges.config.ts): it unlocks nothing but 10 XP.
+   *
+   * The badge is asked for on every call, not only when the status has
+   * just changed: the award stores a tier at most once (the unique key on
+   * user_badges, see BadgesService.award), so a repeat earns nothing and
+   * answers an empty list. Two calls at the same moment are settled by
+   * that key too: only one of them inserts the badge and pays its XP.
+   */
+  async complete(
+    userId: string,
+  ): Promise<{ tutorialStatus: TutorialStatus; badgesEarned: BadgeAward[] }> {
+    return this.prisma.$transaction(async (tx) => {
+      const tutorialStatus = await this.move(tx, userId, 'complete');
+      const badgesEarned = await this.badges.onTutorialCompleted(
+        tx,
+        userId,
+        new Date(),
+      );
+      return { tutorialStatus, badgesEarned };
+    });
   }
 
   /**

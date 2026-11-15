@@ -401,3 +401,37 @@ describe('metricCap', () => {
     expect(metricCap('weeklyStreak')).toBe(highest('weekly_streak'));
   });
 });
+
+describe('bright_start, earned by the tutorial only', () => {
+  const tutorialFree = Object.fromEntries(
+    BADGES.map((badge) => badge.metric)
+      .filter((metric) => metric !== 'tutorialCompleted')
+      .map((metric) => [metric, 1_000_000]),
+  );
+  const keys = (metrics: Parameters<typeof newlyEarned>[0]) =>
+    newlyEarned(metrics, []).map((award) => award.key);
+
+  it('is not earned by any other metric, however high', () => {
+    expect(keys(tutorialFree)).not.toContain('bright_start');
+  });
+
+  it('is not among the metrics a completed task reports', () => {
+    const fromTask = taskEventMetrics({
+      taskType: 'LIFE',
+      isOwnCategory: true,
+      categoryAllDone: true,
+    });
+    expect(fromTask).not.toHaveProperty('tutorialCompleted');
+  });
+
+  it('is earned, for 10 XP, once the tutorial is reported finished', () => {
+    expect(newlyEarned({ tutorialCompleted: 1 }, [])).toEqual([
+      { key: 'bright_start', tier: 'BRONZE', xp: 10 },
+    ]);
+  });
+
+  it('is not earned again once owned', () => {
+    const owned = [{ badgeKey: 'bright_start', tier: 'BRONZE' as const }];
+    expect(newlyEarned({ tutorialCompleted: 1 }, owned)).toEqual([]);
+  });
+});

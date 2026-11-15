@@ -112,6 +112,54 @@ describe('BadgesService', () => {
     });
   });
 
+  describe('onTutorialCompleted', () => {
+    it('stores bright_start, a BADGE XP event of 10 and the XP', async () => {
+      expect(await service.onTutorialCompleted(tx, OWNER, NOW)).toEqual([
+        { key: 'bright_start', tier: 'BRONZE', xp: 10 },
+      ]);
+
+      expect(fake.userBadges).toEqual<UserBadgeRow[]>([
+        {
+          userId: OWNER,
+          badgeKey: 'bright_start',
+          tier: 'BRONZE',
+          earnedAt: NOW,
+        },
+      ]);
+      expect(fake.xpEvents).toEqual([
+        {
+          userId: OWNER,
+          source: 'BADGE',
+          periodKey: 'LIFETIME',
+          baseXp: 10,
+          multiplier: 1,
+          amount: 10,
+          createdAt: expect.any(Date) as Date,
+        },
+      ]);
+      expect(fake.user).toMatchObject({ xpTotal: 10 });
+    });
+
+    it('earns nothing the second time: no badge, no XP event, no XP', async () => {
+      await service.onTutorialCompleted(tx, OWNER, NOW);
+
+      expect(await service.onTutorialCompleted(tx, OWNER, NOW)).toEqual([]);
+      expect(fake.userBadges).toHaveLength(1);
+      expect(fake.xpEvents).toHaveLength(1);
+      expect(fake.user).toMatchObject({ xpTotal: 10 });
+    });
+
+    it('earns only bright_start, whatever else the user has done', async () => {
+      // A long daily history would earn badges in onTaskCompleted; here it
+      // must not count, as the tutorial trigger measures nothing else.
+      addDays(daysInARow(400));
+
+      const awards = await service.onTutorialCompleted(tx, OWNER, NOW);
+
+      expect(earnedPairs(awards)).toEqual(['bright_start:BRONZE']);
+    });
+  });
+
   describe('awarding', () => {
     it('does not award XP for a tier a parallel request inserted first', async () => {
       // The other request's row is already there, but this one read the
