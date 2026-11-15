@@ -24,6 +24,10 @@ model User {
   // How friends find each other (usernames are not unique): 8 characters of
   // FRIEND_CODE_ALPHABET in friend-code.ts, stored normalized.
   friendCode   String   @unique
+  // Where the user is with the onboarding tutorial; the allowed moves are
+  // in tutorial.logic.ts. Every account starts NOT_STARTED, existing ones
+  // included (the migration's default).
+  tutorialStatus TutorialStatus @default(NOT_STARTED)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -37,6 +41,14 @@ model User {
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
   receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
   @@map("users")
+}
+
+// NOT_STARTED → DISMISSED or COMPLETED, DISMISSED → COMPLETED; never back.
+// Watching the tutorial again from the settings does not change it.
+enum TutorialStatus {
+  NOT_STARTED
+  DISMISSED
+  COMPLETED
 }
 
 enum FriendshipStatus {

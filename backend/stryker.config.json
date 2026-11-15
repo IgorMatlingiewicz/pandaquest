@@ -33,7 +33,8 @@
     "src/friends/friend-code.ts",
     "src/friends/friend-errors.ts",
     "src/friends/friend-requests.logic.ts",
-    "src/friends/friend-views.ts"
+    "src/friends/friend-views.ts",
+    "src/tutorial/tutorial.logic.ts"
   ],
   "reporters": ["clear-text", "progress", "html"],
   "htmlReporter": { "fileName": "reports/mutation/mutation.html" },

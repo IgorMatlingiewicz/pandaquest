@@ -238,6 +238,9 @@ export class AuthService {
       level: user.level,
       // Computed here so that clients never need to know the level curve.
       levelProgress: levelProgress(user.xpTotal),
+      // Read at every app start along with the rest: whether to offer the
+      // tutorial, without a request of its own.
+      tutorialStatus: user.tutorialStatus,
     };
   }
 

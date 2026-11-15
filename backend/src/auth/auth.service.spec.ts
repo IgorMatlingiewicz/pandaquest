@@ -288,6 +288,7 @@ describe('AuthService', () => {
         timezone: 'Europe/Warsaw',
         xpTotal: 250,
         level: 3,
+        tutorialStatus: 'DISMISSED',
       });
 
       expect(await service.getProfile('user-1')).toEqual({
@@ -302,6 +303,7 @@ describe('AuthService', () => {
           xpForNextLevel: 110,
           isMax: false,
         },
+        tutorialStatus: 'DISMISSED',
       });
     });
 
