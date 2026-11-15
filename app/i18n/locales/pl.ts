@@ -207,6 +207,7 @@ export default {
       life_goal: "Cel życia",
       first_day: "Pierwszy dzień",
       first_week: "Pierwszy tydzień",
+      bright_start: "Jasny początek",
       own_category_first_task: "Po swojemu",
       own_category_all_done: "Komplet",
       many_categories: "Dużo na głowie",
@@ -236,6 +237,7 @@ export default {
       first_day:
         "Zalicz pierwszy pełny dzień (dzień rejestracji się nie liczy)",
       first_week: "Zalicz pierwszy pełny tydzień",
+      bright_start: "Przejdź samouczek",
       own_category_first_task: "Ukończ zadanie z własnej kategorii",
       own_category_all_done:
         "Ukończ wszystkie zadania własnej kategorii w bieżącym okresie",

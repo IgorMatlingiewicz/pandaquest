@@ -209,6 +209,7 @@ const en: typeof pl = {
       life_goal: "Life goal",
       first_day: "First day",
       first_week: "First week",
+      bright_start: "Bright Start",
       own_category_first_task: "My own way",
       own_category_all_done: "Full set",
       many_categories: "A lot on my plate",
@@ -237,6 +238,7 @@ const en: typeof pl = {
       first_day:
         "Complete your first full day (the day you sign up does not count)",
       first_week: "Complete your first full week",
+      bright_start: "Complete the tutorial",
       own_category_first_task: "Complete a task from your own category",
       own_category_all_done:
         "Complete every task of your own category in the current period",
