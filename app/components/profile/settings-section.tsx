@@ -10,6 +10,7 @@ import { Text } from "@/components/ui/text";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { VStack } from "@/components/ui/vstack";
 import { useAuth } from "@/context/AuthContext";
+import { useTutorial } from "@/context/TutorialContext";
 import {
   useAppColorScheme,
   type AppColorScheme,
@@ -63,6 +64,7 @@ export function SettingsSection() {
   const { colorScheme, toggleColorScheme } = useAppColorScheme();
   const { language, changeLanguage } = useLanguage();
   const { submit, saving } = useChangePassword();
+  const { start: startTutorial } = useTutorial();
   const toast = useToast();
   const [passwordOpen, setPasswordOpen] = useState(false);
 
@@ -115,6 +117,11 @@ export function SettingsSection() {
           onPress={() => setPasswordOpen(true)}
         >
           <ButtonText>{t("profile.settings.changePassword")}</ButtonText>
+        </Button>
+        {/* From step 1, on the Tasks page, whatever the status: a replay
+            changes nothing on the server it has not already got. */}
+        <Button variant="outline" className="min-h-11" onPress={startTutorial}>
+          <ButtonText>{t("profile.settings.replayTutorial")}</ButtonText>
         </Button>
         <Button variant="outline" className="min-h-11" onPress={logout}>
           <ButtonText>{t("common.logout")}</ButtonText>

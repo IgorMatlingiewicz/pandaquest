@@ -12,6 +12,8 @@ export type ConfirmRequest = {
   // A second paragraph, e.g. what stays after the action.
   note?: string;
   confirmLabel: string;
+  // The way out, "Cancel" unless the question needs its own words.
+  cancelLabel?: string;
   destructive?: boolean;
   onConfirm: () => void;
 };
@@ -62,7 +64,9 @@ export function ConfirmDialog({ request, onClose }: Props) {
                   className="min-h-11"
                   onPress={onClose}
                 >
-                  <ButtonText>{t("common.cancel")}</ButtonText>
+                  <ButtonText>
+                    {request.cancelLabel ?? t("common.cancel")}
+                  </ButtonText>
                 </Button>
               </VStack>
             </VStack>
