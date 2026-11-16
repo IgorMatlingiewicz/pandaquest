@@ -157,7 +157,7 @@ const en: typeof pl = {
     form: {
       title: "New goal",
       nameLabel: "What do you want to stay away from?",
-      namePlaceholder: "e.g. Cigarettes",
+      namePlaceholder: "e.g. Sweets",
       start: "Start",
       starting: "Starting...",
     },
@@ -468,11 +468,11 @@ const en: typeof pl = {
     steps: {
       welcome: {
         title: "Welcome to PandaQuest!",
-        body: "We turn everyday chores into a game: finished tasks earn you XP, levels and badges. Let me show you around quickly.",
+        body: "This app turns everyday chores into a game: finished tasks earn you XP, levels and badges. Let me show you around quickly.",
       },
       tasks: {
         title: "Tasks",
-        body: "This is where you plan your day. Tasks live in categories. Add a category with “+ New category” at the top, and a task with “+ Add task” under a category. Edit with the pencil on the right, delete with the bin. Tick the box when a task is done. Change the order by dragging the handle on the left.",
+        body: "This is where you plan your day. Tasks live in categories. Add a category with “+ New category” at the bottom of the list, and a task with “+ Add task” under a category. Edit with the pencil on the right, delete with the bin. Tick the box when a task is done. Change the order by dragging the handle on the left.",
       },
       xp: {
         title: "XP and levels",
@@ -480,7 +480,7 @@ const en: typeof pl = {
       },
       streaks: {
         title: "Quit streaks",
-        body: "A quit streak counts the time without something you're giving up, like cigarettes. Every full day earns XP, and each milestone earns a badge. If you slip, the timer starts over, but your record and badges stay. You can have up to 5 goals. They're private: your friends can't see them.",
+        body: "A quit streak counts the time without something you're giving up, like sweets. Every full day earns XP, and each milestone earns a badge. If you slip, the timer starts over, but your record and badges stay. You can have up to 5 goals. Your goals are private: your friends can't see them.",
       },
       stats: {
         title: "Statistics",
@@ -500,7 +500,7 @@ const en: typeof pl = {
       },
       honesty: {
         title: "The honesty rule",
-        body: "The app doesn't check whether a task was really done. You decide what you tick off, and XP and badges only mean something when they're honest. It's a game you play against yourself.",
+        body: "The app has no way of checking whether a task was really done. You decide what you tick off, and XP and badges only mean something when they're honest. You track and tick off your progress for yourself, not for the points.",
       },
     },
     closeConfirm: {

@@ -154,7 +154,7 @@ export default {
     form: {
       title: "Nowy cel",
       nameLabel: "Bez czego chcesz wytrwać?",
-      namePlaceholder: "np. Papierosy",
+      namePlaceholder: "np. Słodycze",
       start: "Start",
       starting: "Startujemy...",
     },
@@ -470,11 +470,11 @@ export default {
     steps: {
       welcome: {
         title: "Witaj w PandaQuest!",
-        body: "Zamieniamy codzienne obowiązki w grę: za wykonane zadania zdobywasz XP, poziomy i odznaki. Pokażę Ci krótko, jak to działa.",
+        body: "Ta aplikacja zamienia codzienne obowiązki w grę: za wykonane zadania zdobywasz XP, poziomy i odznaki. Pokażę Ci krótko, jak to działa.",
       },
       tasks: {
         title: "Zadania",
-        body: "Tu planujesz dzień. Zadania są w kategoriach. Przyciskiem „+ Nowa kategoria” u góry dodasz kategorię, a „+ Dodaj zadanie” pod kategorią dodasz zadanie. Ołówkiem po prawej edytujesz, koszem usuwasz. Zaznacz pole, gdy zadanie jest zrobione. Kolejność zmienisz, przeciągając za uchwyt po lewej.",
+        body: "Tu planujesz dzień. Zadania są w kategoriach. Przyciskiem „+ Nowa kategoria” na dole listy dodasz kategorię, a „+ Dodaj zadanie” pod kategorią dodasz zadanie. Ołówkiem po prawej edytujesz, koszem usuwasz. Zaznacz pole, gdy zadanie jest zrobione. Kolejność zmienisz, przeciągając za uchwyt po lewej.",
       },
       xp: {
         title: "XP i poziomy",
@@ -482,7 +482,7 @@ export default {
       },
       streaks: {
         title: "Ciągi",
-        body: "Ciąg liczy czas bez czegoś, z czego rezygnujesz, np. bez papierosów. Za każdą pełną dobę dostajesz XP, a za kolejne progi odznaki. Gdy się potkniesz, licznik zaczyna od nowa, ale rekord i odznaki zostają. Możesz mieć do 5 celów. Są prywatne: znajomi ich nie widzą.",
+        body: "Ciąg liczy czas bez czegoś, z czego rezygnujesz, np. bez słodyczy. Za każdą pełną dobę dostajesz XP, a za kolejne progi odznaki. Gdy się potkniesz, licznik zaczyna od nowa, ale rekord i odznaki zostają. Możesz mieć do 5 celów. Twoje cele są prywatne: znajomi ich nie widzą.",
       },
       stats: {
         title: "Statystyki",
@@ -502,7 +502,7 @@ export default {
       },
       honesty: {
         title: "Zasada uczciwości",
-        body: "Aplikacja nie sprawdza, czy zadanie naprawdę zostało zrobione. Ty decydujesz, co zaznaczasz, a XP i odznaki mają sens tylko wtedy, gdy są uczciwe. Gra toczy się z samym sobą.",
+        body: "Aplikacja nie jest w stanie sprawdzić, czy zadanie naprawdę zostało zrobione. Ty decydujesz, co zaznaczasz, a XP i odznaki mają sens tylko wtedy, gdy są uczciwe. Śledzisz i zaznaczasz swoje postępy dla siebie, nie dla punktów.",
       },
     },
     closeConfirm: {
