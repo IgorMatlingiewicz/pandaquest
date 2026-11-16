@@ -171,14 +171,14 @@ describe('recordSec', () => {
 });
 
 describe('goalView', () => {
-  const goal = { id: 'goal-1', name: 'Papierosy', startedAt: START };
+  const goal = { id: 'goal-1', name: 'Słodycze', startedAt: START };
 
   it('derives the days and the record from the running attempt', () => {
     const view = goalView(goal, NO_CLOSED_ATTEMPTS, afterStart(DAY));
 
     expect(view).toEqual({
       id: 'goal-1',
-      name: 'Papierosy',
+      name: 'Słodycze',
       startedAt: START,
       fullDays: 1,
       recordSec: 86_400,

@@ -29,7 +29,7 @@ const RULES: StreakGoalRules = {
 
 const goal = (overrides: Partial<StreakGoal> = {}): StreakGoal => ({
   id: "goal-1",
-  name: "Papierosy",
+  name: "Słodycze",
   startedAt: new Date(SERVER_NOW.getTime() - 2 * HOUR).toISOString(),
   fullDays: 0,
   recordSec: 7200,
@@ -247,7 +247,7 @@ describe("streak goal hooks", () => {
 
   describe("createGoal", () => {
     it("adds the goal the server made and reports no error", async () => {
-      const made = goal({ id: "goal-2", name: "Alkohol" });
+      const made = goal({ id: "goal-2", name: "Fast food" });
       fakeServer({
         [GET]: [listOf(goal())],
         [SYNC]: [reply(NOTHING)],
@@ -257,7 +257,7 @@ describe("streak goal hooks", () => {
 
       let error: string | null = "unset";
       await act(async () => {
-        error = await result.current.createGoal("Alkohol");
+        error = await result.current.createGoal("Fast food");
       });
 
       expect(error).toBeNull();
@@ -278,7 +278,7 @@ describe("streak goal hooks", () => {
 
       let error: string | null = null;
       await act(async () => {
-        error = await result.current.createGoal("Alkohol");
+        error = await result.current.createGoal("Fast food");
       });
 
       expect(error).toBe(key);
@@ -291,7 +291,7 @@ describe("streak goal hooks", () => {
 
       let error: string | null = null;
       await act(async () => {
-        error = await result.current.createGoal("Alkohol");
+        error = await result.current.createGoal("Fast food");
       });
 
       expect(error).toBe("common.noConnection");

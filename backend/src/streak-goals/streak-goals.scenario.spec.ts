@@ -50,7 +50,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('pays the days of an absence and dates the badge when it was reached', async () => {
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
     onDay(1);
     const first = await goals.sync(OWNER);
     expect(first.xpAward).toMatchObject({ amount: STREAK_GOAL_DAY_XP });
@@ -69,7 +69,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('pays nothing for a second sync right after the first', async () => {
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
     onDay(8);
     await goals.sync(OWNER);
     const xpBefore = fake.user.xpTotal;
@@ -81,7 +81,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('settles a slip past a threshold when nothing synced before it', async () => {
-    const id = await createGoal('Papierosy');
+    const id = await createGoal('Słodycze');
 
     onDay(8);
     const slip = await goals.relapse(OWNER, id);
@@ -94,7 +94,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('earns each tier once, also when the next attempt reaches it again', async () => {
-    const id = await createGoal('Papierosy');
+    const id = await createGoal('Słodycze');
     onDay(8);
     await goals.relapse(OWNER, id);
 
@@ -106,10 +106,10 @@ describe('streak goal scenarios', () => {
   });
 
   it('earns a tier once across goals', async () => {
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
     onDay(8);
     await goals.sync(OWNER);
-    await createGoal('Alkohol');
+    await createGoal('Fast food');
 
     onDay(16);
     const later = await goals.sync(OWNER);
@@ -119,9 +119,9 @@ describe('streak goal scenarios', () => {
   });
 
   it('pays all goals as one award and dates the badge by the oldest', async () => {
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
     onDay(3);
-    await createGoal('Alkohol');
+    await createGoal('Fast food');
 
     onDay(8);
     const { xpAward } = await goals.sync(OWNER);
@@ -134,9 +134,9 @@ describe('streak goal scenarios', () => {
   });
 
   it('measures the badge by running attempts, not by closed ones', async () => {
-    const first = await createGoal('Papierosy');
+    const first = await createGoal('Słodycze');
     onDay(1);
-    await createGoal('Alkohol');
+    await createGoal('Fast food');
     onDay(6);
     await goals.relapse(OWNER, first);
 
@@ -151,7 +151,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('earns every tier reached during a long absence, each with its own date', async () => {
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
 
     onDay(150);
     const { xpAward, badgesEarned } = await goals.sync(OWNER);
@@ -186,7 +186,7 @@ describe('streak goal scenarios', () => {
     // The clocks in Poland go back on 25 October, so this week has one
     // calendar day of 25 hours; the moment is still 7 times 24 hours later.
     jest.setSystemTime(new Date('2026-10-20T10:00:00Z'));
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
 
     jest.setSystemTime(new Date('2026-10-27T10:00:00Z'));
     await goals.sync(OWNER);
@@ -197,7 +197,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('shows the current value before a sync, without changing anything', async () => {
-    await createGoal('Papierosy');
+    await createGoal('Słodycze');
     onDay(8);
 
     const before = await streakBadge();
@@ -209,7 +209,7 @@ describe('streak goal scenarios', () => {
   });
 
   it('keeps earned badges and XP after the goal is deleted', async () => {
-    const id = await createGoal('Papierosy');
+    const id = await createGoal('Słodycze');
     onDay(8);
     await goals.sync(OWNER);
     const xpBefore = fake.user.xpTotal;

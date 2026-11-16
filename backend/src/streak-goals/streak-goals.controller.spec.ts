@@ -49,7 +49,7 @@ describe('StreakGoalsController', () => {
   });
 
   it('create uses the user id from the token, not from the body', async () => {
-    const dto = { name: 'Papierosy' };
+    const dto = { name: 'Słodycze' };
 
     await controller.create(req, dto);
 

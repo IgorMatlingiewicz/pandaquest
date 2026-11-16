@@ -30,7 +30,7 @@ describe('StreakGoalsService', () => {
     const goal: StreakGoalRow = {
       id: `goal-seed-${fake.streakGoals.length + 1}`,
       userId: OWNER,
-      name: 'Papierosy',
+      name: 'Słodycze',
       startedAt: START,
       daysRewarded: 0,
       createdAt: START,
@@ -64,10 +64,10 @@ describe('StreakGoalsService', () => {
 
   describe('create', () => {
     it('starts counting now, by the clock of the server', async () => {
-      const goal = await service.create(OWNER, { name: 'Papierosy' });
+      const goal = await service.create(OWNER, { name: 'Słodycze' });
 
       expect(goal).toMatchObject({
-        name: 'Papierosy',
+        name: 'Słodycze',
         startedAt: START,
         fullDays: 0,
         recordSec: 0,
@@ -82,7 +82,7 @@ describe('StreakGoalsService', () => {
 
     it('ignores a date sent by the client', async () => {
       // ValidationPipe has no whitelist here, so extra fields reach the DTO.
-      const body = { name: 'Papierosy', startedAt: '2020-01-01T00:00:00Z' };
+      const body = { name: 'Słodycze', startedAt: '2020-01-01T00:00:00Z' };
 
       await service.create(OWNER, body);
 
@@ -90,14 +90,14 @@ describe('StreakGoalsService', () => {
     });
 
     it('stores the name trimmed', async () => {
-      await service.create(OWNER, { name: '  Papierosy  ' });
+      await service.create(OWNER, { name: '  Słodycze  ' });
 
-      expect(fake.streakGoals[0].name).toBe('Papierosy');
+      expect(fake.streakGoals[0].name).toBe('Słodycze');
     });
 
     it('allows two goals with the same name', async () => {
-      await service.create(OWNER, { name: 'Papierosy' });
-      await service.create(OWNER, { name: 'Papierosy' });
+      await service.create(OWNER, { name: 'Słodycze' });
+      await service.create(OWNER, { name: 'Słodycze' });
 
       expect(fake.streakGoals).toHaveLength(2);
     });
@@ -119,7 +119,7 @@ describe('StreakGoalsService', () => {
       }
 
       await expect(
-        service.create(OWNER, { name: 'Papierosy' }),
+        service.create(OWNER, { name: 'Słodycze' }),
       ).resolves.toBeDefined();
     });
   });

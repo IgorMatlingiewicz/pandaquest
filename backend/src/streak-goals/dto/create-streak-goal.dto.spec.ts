@@ -11,7 +11,7 @@ const validate = (body: unknown) =>
 
 describe('CreateStreakGoalDto', () => {
   it('accepts a name', async () => {
-    await expect(validate({ name: 'Papierosy' })).resolves.toBeDefined();
+    await expect(validate({ name: 'Słodycze' })).resolves.toBeDefined();
   });
 
   it('accepts a name of the maximum length', async () => {
