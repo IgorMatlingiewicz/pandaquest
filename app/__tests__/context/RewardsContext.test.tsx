@@ -51,9 +51,10 @@ const badge = (key: string): BadgeAward => ({ key, tier: "BRONZE", xp: 50 });
 describe("RewardsProvider", () => {
   const refreshUser = jest.fn();
   let report: (outcome: RewardOutcome) => Promise<void>;
+  let hold: () => () => void;
 
   function Capture() {
-    report = useRewards().report;
+    ({ report, hold } = useRewards());
     return null;
   }
 
@@ -187,6 +188,85 @@ describe("RewardsProvider", () => {
     await send({ xpAward });
 
     expect(screen.getByText("level 4")).toBeOnTheScreen();
+  });
+
+  describe("holding the windows back", () => {
+    it("keeps a badge in the queue while held, and shows it once released", async () => {
+      render(app());
+      let release = () => {};
+      act(() => {
+        release = hold();
+      });
+
+      await send({ badgesEarned: [badge("bright_start")] });
+      expect(shownWindow()).toBeNull();
+
+      act(() => release());
+      expect(screen.getByText("bright_start")).toBeOnTheScreen();
+    });
+
+    it("keeps the order of everything queued meanwhile", async () => {
+      refreshUser.mockResolvedValue(user(17));
+      render(app());
+      let release = () => {};
+      act(() => {
+        release = hold();
+      });
+
+      await send({ badgesEarned: [badge("first_day")] });
+      await send({ badgesEarned: [badge("bright_start")] });
+      act(() => release());
+
+      expect(screen.getByText("first_day")).toBeOnTheScreen();
+      closeWindow();
+      expect(screen.getByText("level 17")).toBeOnTheScreen();
+      closeWindow();
+      expect(screen.getByText("bright_start")).toBeOnTheScreen();
+    });
+
+    it("waits for every holder: one release does not undo another hold", async () => {
+      render(app());
+      let first = () => {};
+      let second = () => {};
+      act(() => {
+        first = hold();
+        second = hold();
+      });
+      await send({ badgesEarned: [badge("first_day")] });
+
+      act(() => first());
+      expect(shownWindow()).toBeNull();
+      act(() => second());
+      expect(screen.getByText("first_day")).toBeOnTheScreen();
+    });
+
+    it("counts a release once, however often it is called", async () => {
+      render(app());
+      let first = () => {};
+      act(() => {
+        first = hold();
+        hold();
+      });
+      await send({ badgesEarned: [badge("first_day")] });
+
+      act(() => {
+        first();
+        first();
+      });
+
+      expect(shownWindow()).toBeNull();
+    });
+
+    it("does not hold back the XP toast", async () => {
+      render(app());
+      act(() => {
+        hold();
+      });
+
+      await send({ xpAward });
+
+      expect(mockShowXpToast).toHaveBeenCalledWith(xpAward);
+    });
   });
 
   describe("when the profile cannot be read back", () => {
