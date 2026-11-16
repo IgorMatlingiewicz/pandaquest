@@ -97,6 +97,17 @@ export type StreakGoalsResponse = {
   goals: StreakGoal[];
 };
 
+// Where the user is with the onboarding tutorial (GET /auth/me); it only
+// moves forward: NOT_STARTED → DISMISSED or COMPLETED, DISMISSED → COMPLETED.
+export type TutorialStatus = "NOT_STARTED" | "DISMISSED" | "COMPLETED";
+
+// POST /tutorial/complete: badgesEarned holds Bright Start the first time,
+// nothing on a repeat. The same field the reward queue reads elsewhere.
+export type TutorialCompleteResponse = {
+  tutorialStatus: TutorialStatus;
+  badgesEarned: BadgeAward[];
+};
+
 // Another user as the friends endpoints show them: never an email or an id
 // (PersonView in backend/src/friends/friend-views.ts).
 export type FriendPerson = { username: string; level: number };

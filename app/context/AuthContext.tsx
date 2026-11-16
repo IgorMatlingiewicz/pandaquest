@@ -4,7 +4,7 @@ import { getToken, setToken, removeToken } from "@/lib/tokenStorage";
 
 import { API_URL } from "@/constants/api";
 import { loginErrorKey, registerErrorKey } from "@/lib/api-errors";
-import type { LevelProgress } from "@/types/api";
+import type { LevelProgress, TutorialStatus } from "@/types/api";
 
 export type User = {
   id: string;
@@ -13,6 +13,8 @@ export type User = {
   xpTotal: number;
   level: number;
   levelProgress: LevelProgress;
+  // Decides whether the tutorial starts on its own after logging in.
+  tutorialStatus: TutorialStatus;
 };
 
 type AuthContextType = {
