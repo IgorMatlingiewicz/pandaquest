@@ -12,6 +12,7 @@ import { useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { LanguageToggle } from "@/components/language-toggle";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -108,7 +109,7 @@ export function TutorialOverlay() {
               total: TUTORIAL_STEP_COUNT,
               title,
             })}
-            className="pr-12 outline-none"
+            className="pr-24 outline-none"
           >
             <Text size="xs" className="text-muted-foreground" aria-hidden>
               {t("tutorial.counter", { step, total: TUTORIAL_STEP_COUNT })}
@@ -154,15 +155,22 @@ export function TutorialOverlay() {
             </Button>
           </View>
 
-          <Pressable
-            onPress={tutorial.requestClose}
-            role="button"
-            aria-label={t("tutorial.close")}
-            disabled={saving}
-            className="absolute right-2 top-2 h-11 w-11 items-center justify-center"
-          >
-            <MaterialCommunityIcons name="close" size={22} color="#999" />
-          </Pressable>
+          {/* The language and the X, in the top right corner. The backdrop
+              covers the top bar's switch, so the card carries its own: the
+              tutorial can be read in either language from any step. Last in
+              the card, so the window still opens on the heading. */}
+          <View className="absolute right-2 top-2 flex-row items-center">
+            <LanguageToggle />
+            <Pressable
+              onPress={tutorial.requestClose}
+              role="button"
+              aria-label={t("tutorial.close")}
+              disabled={saving}
+              className="h-11 w-11 items-center justify-center"
+            >
+              <MaterialCommunityIcons name="close" size={22} color="#999" />
+            </Pressable>
+          </View>
         </Card>
 
         {/* Inside this window, not beside it: on iOS a second Modal next to

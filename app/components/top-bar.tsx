@@ -14,7 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppColorScheme } from "@/context/ColorSchemeContext";
 import { useFriendsSummary } from "@/context/FriendsSummaryContext";
 import { NAV_INLINE, TOP_BAR_NAME_MAX_WIDTH } from "@/constants/layout";
-import { useLanguage } from "@/hooks/use-language";
+import { LanguageToggle } from "@/components/language-toggle";
 import { LevelBar } from "@/components/level-bar";
 import { NavItem } from "@/components/nav-item";
 import { HStack } from "@/components/ui/hstack";
@@ -62,27 +62,14 @@ function Settings() {
   const { logout } = useAuth();
   const { colorScheme, toggleColorScheme } = useAppColorScheme();
   const { t } = useTranslation();
-  const { language, changeLanguage } = useLanguage();
 
   // Buttons for a screen reader too: a role, and a name that says what a
   // press does. Without one, the theme switch was named by its icon's font
-  // glyph on the web, and the language switch by "PL" alone. 44×44 at
-  // least, as hitSlop does not reach the web.
+  // glyph on the web. 44×44 at least, as hitSlop does not reach the web.
   const target = "min-h-11 min-w-11 items-center justify-center";
   return (
     <HStack space="xs" className="items-center">
-      <Pressable
-        onPress={() => changeLanguage(language === "pl" ? "en" : "pl")}
-        role="button"
-        aria-label={t(
-          language === "pl" ? "nav.switchToEnglish" : "nav.switchToPolish",
-        )}
-        className={target}
-      >
-        <Text className="text-muted-foreground">
-          {language === "pl" ? "PL" : "EN"}
-        </Text>
-      </Pressable>
+      <LanguageToggle />
       <Pressable
         onPress={toggleColorScheme}
         role="button"
