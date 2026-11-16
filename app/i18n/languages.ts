@@ -10,7 +10,8 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
  * For a device in a language the app does not have: English is understood
  * more widely than Polish by someone whose phone is in, say, German. Also
  * i18next's fallback for a missing text, which never happens in practice:
- * en.ts has the type of pl.ts, so both always have every key.
+ * every file in locales/en/ has the type of its twin in locales/pl/, so
+ * both always have every key.
  */
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
