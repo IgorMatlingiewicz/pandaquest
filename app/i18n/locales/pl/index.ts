@@ -14,6 +14,7 @@ import achievements from "./achievements";
 import profile from "./profile";
 import friends from "./friends";
 import tutorial from "./tutorial";
+import reminders from "./reminders";
 
 export default {
   common,
@@ -30,4 +31,5 @@ export default {
   profile,
   friends,
   tutorial,
+  reminders,
 };

@@ -141,6 +141,26 @@ export type FriendsSummary = {
   pendingIncomingCount: number;
 };
 
+// GET /reminders, as backend/src/reminders/reminders.logic.ts builds it.
+// Payloads hold only numbers; the app writes the words. The key is opaque
+// to the app: it only sends it back to POST /reminders/ack.
+export type AtRiskStreak = { unit: "DAY" | "WEEK"; length: number };
+
+export type CycleReminderPayload = {
+  /** Due tasks not done yet in the current day or week. */
+  remaining: number;
+  /** Only when there is a streak of at least 1 to lose. */
+  atRiskStreak?: AtRiskStreak;
+};
+
+export type Reminder =
+  | { key: string; type: "DAILY_EVENING"; payload: CycleReminderPayload }
+  | { key: string; type: "WEEKLY_LAST_DAY"; payload: CycleReminderPayload }
+  // One per new request, each with the count of all of them.
+  | { key: string; type: "FRIEND_INVITE"; payload: { count: number } };
+
+export type RemindersResponse = { reminders: Reminder[] };
+
 // One friend in GET /friends; friendshipId addresses everything else.
 export type Friend = FriendPerson & { friendshipId: string };
 

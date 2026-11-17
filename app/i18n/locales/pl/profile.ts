@@ -36,6 +36,8 @@ const profile = {
     languages: { pl: "Polski", en: "English" },
     theme: "Motyw",
     themes: { light: "Jasny", dark: "Ciemny" },
+    reminders: "Przypomnienia w aplikacji",
+    remindersOptions: { on: "Włączone", off: "Wyłączone" },
     changePassword: "Zmień hasło",
     replayTutorial: "Odtwórz samouczek",
   },

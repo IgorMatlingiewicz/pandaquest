@@ -15,6 +15,7 @@ import achievements from "./achievements";
 import profile from "./profile";
 import friends from "./friends";
 import tutorial from "./tutorial";
+import reminders from "./reminders";
 
 const en: typeof pl = {
   common,
@@ -31,6 +32,7 @@ const en: typeof pl = {
   profile,
   friends,
   tutorial,
+  reminders,
 };
 
 export default en;

@@ -37,6 +37,8 @@ const profile: typeof pl = {
     languages: { pl: "Polski", en: "English" },
     theme: "Theme",
     themes: { light: "Light", dark: "Dark" },
+    reminders: "In-app reminders",
+    remindersOptions: { on: "On", off: "Off" },
     changePassword: "Change password",
     replayTutorial: "Replay the tutorial",
   },
