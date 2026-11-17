@@ -5,16 +5,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import { REMINDERS_CLOCK, type RemindersClock } from './reminders.clock';
 import {
   buildReminders,
+  friendInviteKey,
+  shownCutoff,
   type CycleState,
   type Reminder,
 } from './reminders.logic';
 
 /*
- * The reminders the user has not confirmed yet. Reading them changes
- * nothing: a reminder is gone only after POST /reminders/ack, so one the
- * app fetched but never showed (closed at once, no connection) comes back.
- * Four reads whatever the amount of data; every decision is in
- * reminders.logic.
+ * The reminders the user has not confirmed yet, and confirming them.
+ * Reading changes nothing: a reminder is gone only after POST
+ * /reminders/ack, so one the app fetched but never showed (closed at once,
+ * no connection) comes back. Four reads whatever the amount of data; every
+ * decision is in reminders.logic.
  */
 @Injectable()
 export class RemindersService {
@@ -97,5 +99,41 @@ export class RemindersService {
         shownKeys: new Set(shown.map((row) => row.key)),
       }),
     };
+  }
+
+  /**
+   * Marks the keys as shown, so GET leaves them out. Idempotent: the unique
+   * (userId, key) index keeps the first row, without a pre-check and
+   * without catching P2002, so a repeat or two calls at once both end in
+   * one row. Then removes the user's rows older than SHOWN_RETENTION_DAYS,
+   * except the keys of friend requests still waiting.
+   */
+  async ack(userId: string, keys: readonly string[]): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    // Without it the insert would hit the foreign key: a 500, not a 401.
+    if (!user) throw new UnauthorizedException();
+
+    const now = this.clock();
+    const waiting = await this.prisma.friendship.findMany({
+      where: { addresseeId: userId, status: 'PENDING' },
+      select: { id: true },
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.reminderShown.createMany({
+        data: keys.map((key) => ({ userId, key, shownAt: now })),
+        skipDuplicates: true,
+      }),
+      this.prisma.reminderShown.deleteMany({
+        where: {
+          userId,
+          shownAt: { lt: shownCutoff(now) },
+          key: { notIn: waiting.map((invite) => friendInviteKey(invite.id)) },
+        },
+      }),
+    ]);
   }
 }

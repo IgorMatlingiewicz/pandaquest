@@ -11,3 +11,11 @@ export const EVENING_REMINDER_HOUR = 19;
  * call.
  */
 export const MAX_REMINDERS = 10;
+
+/**
+ * How long a confirmed key is kept. Past that its day or week is long over,
+ * so the row can never hide a reminder again; it is removed the next time
+ * the user confirms anything. The one exception is a friend request that
+ * is still waiting: its key stays, or the reminder would come back.
+ */
+export const SHOWN_RETENTION_DAYS = 30;

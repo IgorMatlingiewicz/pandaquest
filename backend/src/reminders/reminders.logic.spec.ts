@@ -1,11 +1,17 @@
+import { randomUUID } from 'node:crypto';
 import type { PeriodCompletion } from '../common/full-period';
 import { currentDailyStreak } from '../stats/stats.logic';
 import { MAX_REMINDERS } from './reminders.config';
 import {
+  REMINDER_KEY_PATTERN,
   buildReminders,
   cyclePayload,
+  dailyKey,
+  friendInviteKey,
   isEvening,
   isLastDayOfWeek,
+  shownCutoff,
+  weeklyKey,
   type CycleState,
   type ReminderInput,
 } from './reminders.logic';
@@ -47,6 +53,52 @@ const input = (over: Partial<ReminderInput>): ReminderInput => ({
   pendingInviteIds: [],
   shownKeys: new Set(),
   ...over,
+});
+
+describe('REMINDER_KEY_PATTERN', () => {
+  const FRIENDSHIP = '3f2a9c1e-5b7d-4e8f-9a0b-1c2d3e4f5a6b';
+
+  it('accepts every key the builders make', () => {
+    for (const key of [
+      dailyKey(WED_19_00, WARSAW),
+      weeklyKey(WED_19_00, WARSAW),
+      // ISO week 53 and a week number below 10.
+      weeklyKey(at('2027-01-01T12:00:00Z'), WARSAW),
+      weeklyKey(at('2026-03-04T12:00:00Z'), WARSAW),
+      friendInviteKey(FRIENDSHIP),
+      friendInviteKey(randomUUID()),
+    ]) {
+      expect(key).toMatch(REMINDER_KEY_PATTERN);
+    }
+  });
+
+  it.each([
+    ['nothing', ''],
+    ['no prefix', '2026-11-11'],
+    ['an unknown prefix', 'monthly:2026-11'],
+    ['capital letters', 'DAILY:2026-11-11'],
+    ['a day without zero padding', 'daily:2026-11-1'],
+    ['a week key under daily', 'daily:2026-W46'],
+    ['a week without the W', 'weekly:2026-46'],
+    ['a week without zero padding', 'weekly:2026-W6'],
+    ['something after the key', 'daily:2026-11-11x'],
+    ['a space around the key', ' daily:2026-11-11'],
+    ['a second line', 'daily:2026-11-11\ndaily:2026-11-12'],
+    ['a friend request that is not a UUID', 'friend_invite:abc'],
+    ['a UUID in capitals', `friend_invite:${FRIENDSHIP.toUpperCase()}`],
+    ['a UUID without dashes', `friend_invite:${FRIENDSHIP.replace(/-/g, '')}`],
+  ])('refuses %s', (_, key) => {
+    expect(key).not.toMatch(REMINDER_KEY_PATTERN);
+  });
+});
+
+describe('shownCutoff', () => {
+  it('is 30 days of 24 hours before now, whatever the clocks did', () => {
+    // 25 October lies in between: still exactly 30 × 24 h.
+    expect(shownCutoff(at('2026-11-11T18:00:00Z'))).toEqual(
+      at('2026-10-12T18:00:00Z'),
+    );
+  });
 });
 
 describe('isEvening', () => {

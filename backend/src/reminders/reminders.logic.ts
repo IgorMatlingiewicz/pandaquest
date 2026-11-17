@@ -8,7 +8,11 @@ import {
 import { getPeriodEnd, getPeriodKey, getPeriodStart } from '../common/period';
 import type { CycleType } from '../generated/prisma/client';
 import { streakWithoutCap } from '../stats/stats.logic';
-import { EVENING_REMINDER_HOUR, MAX_REMINDERS } from './reminders.config';
+import {
+  EVENING_REMINDER_HOUR,
+  MAX_REMINDERS,
+  SHOWN_RETENTION_DAYS,
+} from './reminders.config';
 
 /*
  * In-app reminders, worked out when the app asks: no job runs in the
@@ -73,6 +77,20 @@ export const weeklyKey = (now: Date, timezone: string) =>
   `weekly:${periodKey('WEEKLY', now, timezone)}`;
 export const friendInviteKey = (friendshipId: string) =>
   `friend_invite:${friendshipId}`;
+
+/**
+ * Every key the three builders above can make, and nothing else: the shape
+ * POST /reminders/ack accepts. Only the shape is checked, not that the day
+ * or the friend request exists; a key nobody is shown hides nothing.
+ */
+export const REMINDER_KEY_PATTERN =
+  /^(daily:\d{4}-\d{2}-\d{2}|weekly:\d{4}-W\d{2}|friend_invite:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+
+/** Confirmed keys from before this instant may be removed. */
+export function shownCutoff(now: Date): Date {
+  // Plain milliseconds: "about a month ago" needs no calendar or timezone.
+  return new Date(now.getTime() - SHOWN_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+}
 
 /** From EVENING_REMINDER_HOUR local time until midnight. */
 export function isEvening(now: Date, timezone: string): boolean {

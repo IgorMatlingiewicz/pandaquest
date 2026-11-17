@@ -1,3 +1,4 @@
+import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RemindersController } from './reminders.controller';
 import { RemindersService } from './reminders.service';
@@ -22,7 +23,7 @@ describe('RemindersController', () => {
     user: { userId: USER_ID, email: 'user@example.com' },
   } as AuthedRequest;
 
-  const service = { getReminders: jest.fn() };
+  const service = { getReminders: jest.fn(), ack: jest.fn() };
   let controller: RemindersController;
 
   beforeEach(async () => {
@@ -40,5 +41,23 @@ describe('RemindersController', () => {
     await controller.getReminders(req);
 
     expect(service.getReminders).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it('confirms the keys for the authenticated user only', async () => {
+    const keys = ['daily:2026-11-17'];
+
+    await controller.ack(req, { keys });
+
+    expect(service.ack).toHaveBeenCalledWith(USER_ID, keys);
+  });
+
+  it('answers the confirmation with 204, nothing to send back', () => {
+    // @HttpCode keeps its status on the method itself; it is read, not called.
+    const handler = Object.getOwnPropertyDescriptor(
+      RemindersController.prototype,
+      'ack',
+    )?.value as object;
+
+    expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(204);
   });
 });

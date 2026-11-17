@@ -4,7 +4,10 @@ import { App } from 'supertest/types';
 import type { CycleType, TaskType } from '../src/generated/prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { REMINDERS_CLOCK } from '../src/reminders/reminders.clock';
-import { MAX_REMINDERS } from '../src/reminders/reminders.config';
+import {
+  MAX_REMINDERS,
+  SHOWN_RETENTION_DAYS,
+} from '../src/reminders/reminders.config';
 import type { Reminder } from '../src/reminders/reminders.logic';
 import { bearerFor, createApp } from './app';
 import { createUser, deleteAccount, resetDatabase } from './db';
@@ -427,6 +430,251 @@ describe('reminders', () => {
       expect(reminders[0].key).toBe(`friend_invite:${ids[ids.length - 1]}`);
       expect(reminders.every((r) => r.type === 'FRIEND_INVITE')).toBe(true);
       expect(reminders[0].payload).toEqual({ count: MAX_REMINDERS + 2 });
+    });
+  });
+
+  describe('POST /reminders/ack', () => {
+    const ack = (who: Person, body: unknown) =>
+      api()
+        .post('/reminders/ack')
+        .set(who.auth)
+        .send(body as object);
+    const rowsOf = (who: Person) =>
+      prisma.reminderShown.findMany({
+        where: { userId: who.id },
+        orderBy: { key: 'asc' },
+      });
+    const DAY = 24 * 60 * 60 * 1000;
+    const daysBefore = (days: number) =>
+      new Date(clock.now.getTime() - days * DAY);
+
+    it('answers 401 without a token, and when the account is gone', async () => {
+      await api()
+        .post('/reminders/ack')
+        .send({ keys: ['daily:2026-11-11'] })
+        .expect(401);
+
+      const me = await person();
+      await deleteAccount(prisma, me.id);
+      await ack(me, { keys: ['daily:2026-11-11'] }).expect(401);
+    });
+
+    it('answers 204 and hides the reminder the rest of the day; the next day has its own', async () => {
+      const me = await person();
+      await addTask(me, 'DAILY');
+      const [shown] = (await getReminders(me)).reminders;
+
+      const res = await ack(me, { keys: [shown.key] }).expect(204);
+
+      expect(res.text).toBe('');
+      expect(await keysOf(me)).toEqual([]);
+      clock.now = new Date('2026-11-11T22:59:59Z'); // 23:59:59
+      expect(await keysOf(me)).toEqual([]);
+      clock.now = THU_19_00;
+      expect(await keysOf(me)).toEqual(['daily:2026-11-12']);
+    });
+
+    it('stores the moment from the clock', async () => {
+      const me = await person();
+
+      await ack(me, { keys: ['daily:2026-11-11'] }).expect(204);
+
+      expect(await rowsOf(me)).toEqual([
+        expect.objectContaining({
+          key: 'daily:2026-11-11',
+          shownAt: WED_19_00,
+        }),
+      ]);
+    });
+
+    it('confirms every friend request at once, and a new one shows again', async () => {
+      const me = await person();
+      await ask(await person(), me);
+      await ask(await person(), me);
+      const keys = (await getReminders(me)).reminders.map((r) => r.key);
+
+      await ack(me, { keys }).expect(204);
+      expect(await keysOf(me)).toEqual([]);
+
+      const fresh = await ask(await person(), me);
+      expect((await getReminders(me)).reminders).toEqual([
+        {
+          key: `friend_invite:${fresh}`,
+          type: 'FRIEND_INVITE',
+          payload: { count: 1 },
+        },
+      ]);
+    });
+
+    describe('is idempotent', () => {
+      it('the same keys twice: 204 both times, one row each', async () => {
+        const me = await person();
+        const keys = ['daily:2026-11-11', 'weekly:2026-W46'];
+
+        await ack(me, { keys }).expect(204);
+        await ack(me, { keys }).expect(204);
+
+        expect((await rowsOf(me)).map((r) => r.key)).toEqual(keys);
+      });
+
+      it('the same key twice in one request: one row', async () => {
+        const me = await person();
+
+        await ack(me, {
+          keys: ['daily:2026-11-11', 'daily:2026-11-11'],
+        }).expect(204);
+
+        expect(await rowsOf(me)).toHaveLength(1);
+      });
+
+      it('keeps the first moment when a key comes again', async () => {
+        const me = await person();
+        await ack(me, { keys: ['daily:2026-11-11'] }).expect(204);
+        clock.now = new Date('2026-11-11T20:00:00Z');
+
+        await ack(me, { keys: ['daily:2026-11-11'] }).expect(204);
+
+        expect((await rowsOf(me))[0].shownAt).toEqual(WED_19_00);
+      });
+
+      it('two phones at the same moment: both 204, one row per key', async () => {
+        // Ten rounds of five requests at once, with overlapping keys. The
+        // unique index decides: ON CONFLICT DO NOTHING waits for the other
+        // transaction and then skips, so no request fails.
+        for (let round = 0; round < 10; round++) {
+          const me = await person();
+          const bodies = [
+            ['daily:2026-11-11'],
+            ['daily:2026-11-11'],
+            ['daily:2026-11-11', 'weekly:2026-W46'],
+            ['weekly:2026-W46', 'daily:2026-11-11'],
+            ['weekly:2026-W46'],
+          ];
+
+          const responses = await Promise.all(
+            bodies.map((keys) => ack(me, { keys })),
+          );
+
+          expect(responses.map((r) => r.status)).toEqual([
+            204, 204, 204, 204, 204,
+          ]);
+          expect((await rowsOf(me)).map((r) => r.key)).toEqual([
+            'daily:2026-11-11',
+            'weekly:2026-W46',
+          ]);
+        }
+      });
+    });
+
+    it(`takes exactly ${MAX_REMINDERS} keys`, async () => {
+      const me = await person();
+      const keys = Array.from(
+        { length: MAX_REMINDERS },
+        (_, i) => `daily:2026-11-${String(i + 1).padStart(2, '0')}`,
+      );
+
+      await ack(me, { keys }).expect(204);
+
+      expect(await rowsOf(me)).toHaveLength(MAX_REMINDERS);
+    });
+
+    it.each([
+      ['no body', undefined],
+      ['no keys', {}],
+      ['keys that are not a list', { keys: 'daily:2026-11-11' }],
+      ['an empty list', { keys: [] }],
+      [
+        `${MAX_REMINDERS + 1} keys`,
+        {
+          keys: Array.from(
+            { length: MAX_REMINDERS + 1 },
+            (_, i) => `daily:2026-11-${String(i + 1).padStart(2, '0')}`,
+          ),
+        },
+      ],
+      ['a number', { keys: [20261111] }],
+      ['null', { keys: [null] }],
+      ['an unknown prefix', { keys: ['monthly:2026-11'] }],
+      ['a malformed day', { keys: ['daily:2026-11-1'] }],
+      ['a malformed week', { keys: ['weekly:2026-46'] }],
+      ['a friend request that is not a UUID', { keys: ['friend_invite:1'] }],
+      [
+        'one bad key among good ones',
+        { keys: ['daily:2026-11-11', 'weekly:2026-W46', 'oops'] },
+      ],
+    ])('answers 400 to %s and stores nothing', async (_, body) => {
+      const me = await person();
+
+      await ack(me, body).expect(400);
+
+      expect(await rowsOf(me)).toEqual([]);
+    });
+
+    it('writes only for the caller', async () => {
+      const [me, other] = [await person(), await person()];
+      await addTask(other, 'DAILY');
+      // A key of someone else's friend request hides nothing for them.
+      const theirs = await ask(await person(), other);
+
+      await ack(me, {
+        keys: ['daily:2026-11-11', `friend_invite:${theirs}`],
+      }).expect(204);
+
+      expect(
+        await prisma.reminderShown.count({ where: { userId: other.id } }),
+      ).toBe(0);
+      expect(await keysOf(other)).toEqual([
+        'daily:2026-11-11',
+        `friend_invite:${theirs}`,
+      ]);
+    });
+
+    describe(`removes rows older than ${SHOWN_RETENTION_DAYS} days`, () => {
+      it('keeps the younger ones and those of requests still waiting', async () => {
+        const me = await person();
+        const waiting = await ask(await person(), me);
+        const accepted = await ask(await person(), me);
+        await api()
+          .post(`/friends/requests/${accepted}/accept`)
+          .set(me.auth)
+          .expect(200);
+        await prisma.reminderShown.createMany({
+          data: [
+            { key: 'daily:2026-10-01', shownAt: daysBefore(41) },
+            { key: 'weekly:2026-W41', shownAt: daysBefore(31) },
+            { key: 'daily:2026-10-14', shownAt: daysBefore(29) },
+            { key: `friend_invite:${waiting}`, shownAt: daysBefore(60) },
+            { key: `friend_invite:${accepted}`, shownAt: daysBefore(60) },
+          ].map((row) => ({ ...row, userId: me.id })),
+        });
+
+        await ack(me, { keys: ['daily:2026-11-11'] }).expect(204);
+
+        expect((await rowsOf(me)).map((r) => r.key)).toEqual([
+          'daily:2026-10-14',
+          'daily:2026-11-11',
+          `friend_invite:${waiting}`,
+        ]);
+        // The waiting request stays confirmed: no reminder comes back.
+        expect(await keysOf(me)).toEqual([]);
+      });
+
+      it('leaves other users’ rows alone', async () => {
+        const [me, other] = [await person(), await person()];
+        await prisma.reminderShown.create({
+          data: {
+            userId: other.id,
+            key: 'daily:2026-09-01',
+            shownAt: daysBefore(70),
+          },
+        });
+
+        await ack(me, { keys: ['daily:2026-11-11'] }).expect(204);
+
+        expect(
+          await prisma.reminderShown.count({ where: { userId: other.id } }),
+        ).toBe(1);
+      });
     });
   });
 
