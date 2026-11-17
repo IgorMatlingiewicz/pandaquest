@@ -10,78 +10,15 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { hashPassword, verifyPassword } from './password';
-import { Prisma, TaskType, CompletionMode } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { getPeriodKey } from '../common/period';
 import { violatedUniqueIndex } from '../common/prisma-errors';
 import { withFreshFriendCode } from '../friends/friend-code';
 import { levelProgress } from '../xp/xp.logic';
+import { defaultCategories, type SignUpLanguage } from './default-categories';
 
 /** The unique index on users.email, as the first migration names it. */
 const EMAIL_INDEX = 'users_email_key';
-
-type DefaultTaskSeed = {
-  title: string;
-  completionMode: CompletionMode;
-  progressTarget?: number;
-  progressCurrent?: number;
-};
-
-type DefaultCategorySeed = {
-  name: string;
-  icon: string;
-  cycleType: TaskType;
-  tasks: DefaultTaskSeed[];
-};
-
-const DEFAULT_CATEGORIES: DefaultCategorySeed[] = [
-  {
-    name: 'Dzienne',
-    icon: '☀️',
-    cycleType: TaskType.DAILY,
-    tasks: [
-      {
-        title: 'Wyprowadź psa',
-        completionMode: CompletionMode.PROGRESS,
-        progressTarget: 3,
-        progressCurrent: 1,
-      },
-      { title: 'Weź tabletki', completionMode: CompletionMode.BOOLEAN },
-    ],
-  },
-  {
-    name: 'Tygodniowe',
-    icon: '📅',
-    cycleType: TaskType.WEEKLY,
-    tasks: [
-      { title: 'Zrób pranie', completionMode: CompletionMode.BOOLEAN },
-      { title: 'Zrób zakupy', completionMode: CompletionMode.BOOLEAN },
-      {
-        title: 'Idź na siłownię',
-        completionMode: CompletionMode.PROGRESS,
-        progressTarget: 3,
-        progressCurrent: 2,
-      },
-    ],
-  },
-  {
-    name: 'Życiowe',
-    icon: '🎯',
-    cycleType: TaskType.LIFE,
-    tasks: [
-      { title: 'Kup dom', completionMode: CompletionMode.BOOLEAN },
-      {
-        title: 'Oszczędź 100 000 PLN',
-        completionMode: CompletionMode.PROGRESS,
-        progressTarget: 100000,
-        progressCurrent: 27000,
-      },
-      {
-        title: 'Naucz się grać na skrzypcach',
-        completionMode: CompletionMode.BOOLEAN,
-      },
-    ],
-  },
-];
 
 @Injectable()
 export class AuthService {
@@ -118,6 +55,7 @@ export class AuthService {
           tx,
           createdUser.id,
           createdUser.timezone,
+          dto.language,
         );
 
         return createdUser;
@@ -142,14 +80,18 @@ export class AuthService {
     };
   }
 
+  /** The example categories and tasks, in the language the app signed up in. */
   private async seedDefaultCategories(
     tx: Prisma.TransactionClient,
     userId: string,
     timezone: string,
+    language: SignUpLanguage | undefined,
   ) {
     const now = new Date();
 
-    for (const [categoryIndex, category] of DEFAULT_CATEGORIES.entries()) {
+    for (const [categoryIndex, category] of defaultCategories(
+      language,
+    ).entries()) {
       const createdCategory = await tx.category.create({
         data: {
           userId,

@@ -124,6 +124,26 @@ describe('AuthService', () => {
       ]);
     });
 
+    it('writes the examples in the language the app signed up in', async () => {
+      await service.register({ ...dto, language: 'en' });
+
+      const categoryNames = (
+        prisma.category.create.mock.calls as [{ data: { name: string } }][]
+      ).map(([args]) => args.data.name);
+      expect(categoryNames).toEqual(['Daily', 'Weekly', 'Life']);
+      expect(createdTask('Walk the dog')).toBeDefined();
+      expect(createdTask('Wyprowadź psa')).toBeUndefined();
+    });
+
+    it('writes them in Polish when the app names no language', async () => {
+      await service.register(dto);
+
+      const categoryNames = (
+        prisma.category.create.mock.calls as [{ data: { name: string } }][]
+      ).map(([args]) => args.data.name);
+      expect(categoryNames).toEqual(['Dzienne', 'Tygodniowe', 'Życiowe']);
+    });
+
     it("seeds cyclic progress as completions for the new user's current period", async () => {
       // Monday 18:00 in Warsaw, already Tuesday 06:00 on Kiritimati (UTC+14).
       jest.useFakeTimers({ now: new Date('2026-10-05T16:00:00Z') });
