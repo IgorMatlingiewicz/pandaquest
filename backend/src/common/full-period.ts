@@ -36,22 +36,41 @@ export function doneSet(completions: readonly PeriodCompletion[]): Set<string> {
 }
 
 /**
+ * The tasks a period requires. A task is due only in periods that started
+ * after it was created, so the period it is added in is a spare one.
+ */
+export function dueTasks<T extends FullPeriodTask>(
+  tasks: readonly T[],
+  windowFor: (type: TaskType) => DueWindow,
+): T[] {
+  return tasks.filter((task) => {
+    const { start } = windowFor(task.type);
+    return start === null || task.createdAt.getTime() < start.getTime();
+  });
+}
+
+/** The due tasks not done yet, each in the period of its own type. */
+export function undoneDueTasks<T extends FullPeriodTask>(
+  tasks: readonly T[],
+  done: ReadonlySet<string>,
+  windowFor: (type: TaskType) => DueWindow,
+): T[] {
+  return dueTasks(tasks, windowFor).filter(
+    (task) => !done.has(doneKey(task.id, windowFor(task.type).key)),
+  );
+}
+
+/**
  * A period is full when at least one task is due in it and every due task
- * is done. A task is due only in periods that started after it was created,
- * so the period it is added in is a spare one.
+ * is done.
  */
 export function isPeriodFull(
   tasks: readonly FullPeriodTask[],
   done: ReadonlySet<string>,
   windowFor: (type: TaskType) => DueWindow,
 ): boolean {
-  const due = tasks.filter((task) => {
-    const { start } = windowFor(task.type);
-    return start === null || task.createdAt.getTime() < start.getTime();
-  });
-
   return (
-    due.length > 0 &&
-    due.every((task) => done.has(doneKey(task.id, windowFor(task.type).key)))
+    dueTasks(tasks, windowFor).length > 0 &&
+    undoneDueTasks(tasks, done, windowFor).length === 0
   );
 }

@@ -1,3 +1,4 @@
+import { getPeriodKey } from '../common/period';
 import type { XpSource } from '../generated/prisma/client';
 import { ACTIVITY_WEEKS, XP_WEEKS } from './stats.config';
 import {
@@ -10,6 +11,7 @@ import {
   monthKey,
   monthTotals,
   nextDayKey,
+  streakWithoutCap,
   weeklyXp,
   type StatsEvent,
 } from './stats.logic';
@@ -370,6 +372,44 @@ describe('currentDailyStreak', () => {
 
     expect(currentDailyStreak(keys, NOW, WARSAW)).toBe(400);
     expect(longestStreak(keys)).toBe(400);
+  });
+});
+
+describe('streakWithoutCap', () => {
+  // NOW is Wednesday of 2026-W46.
+  it('counts weeks too, ending last week while this one is open', () => {
+    const keys = ['2026-W43', '2026-W44', '2026-W45'];
+
+    expect(streakWithoutCap(keys, 'WEEKLY', NOW, WARSAW)).toBe(3);
+  });
+
+  it('ends this week once this week is complete', () => {
+    const keys = ['2026-W45', '2026-W46'];
+
+    expect(streakWithoutCap(keys, 'WEEKLY', NOW, WARSAW)).toBe(2);
+  });
+
+  it('is zero once last week was missed', () => {
+    expect(streakWithoutCap(['2026-W44'], 'WEEKLY', NOW, WARSAW)).toBe(0);
+  });
+
+  it('is not stopped at the top weekly_streak threshold of 48 weeks', () => {
+    // 60 weeks in a row up to last week, across the turn of the ISO year.
+    const keys: string[] = [];
+    for (let at = new Date(NOW); keys.length < 60;) {
+      at = new Date(at.getTime() - 7 * 24 * 60 * 60 * 1000);
+      keys.push(getPeriodKey('WEEKLY', at, WARSAW)!);
+    }
+
+    expect(streakWithoutCap(keys, 'WEEKLY', NOW, WARSAW)).toBe(60);
+  });
+
+  it('gives the daily count the statistics screen shows', () => {
+    const keys = ['2026-11-09', '2026-11-10'];
+
+    expect(streakWithoutCap(keys, 'DAILY', NOW, WARSAW)).toBe(
+      currentDailyStreak(keys, NOW, WARSAW),
+    );
   });
 });
 

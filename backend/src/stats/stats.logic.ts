@@ -6,7 +6,7 @@ import {
   getPeriodStart,
   getPreviousPeriods,
 } from '../common/period';
-import type { XpSource } from '../generated/prisma/client';
+import type { CycleType, XpSource } from '../generated/prisma/client';
 import { ACTIVITY_WEEKS, XP_WEEKS } from './stats.config';
 
 /*
@@ -165,17 +165,33 @@ export function longestStreak(dayKeys: readonly string[]): number {
 }
 
 /**
- * The same count as the daily_streak badge, from the same function: an open
- * today does not break the streak yet. The badge stops counting at its top
- * threshold; the statistics do not, so the limit is the number of completed
- * days, which no streak can exceed.
+ * The same count as the daily_streak and weekly_streak badges, from the same
+ * function: an open current period does not break the streak yet. A badge
+ * stops counting at its top threshold; this does not, so the limit is the
+ * number of completed periods, which no streak can exceed.
  */
+export function streakWithoutCap(
+  completedKeys: readonly string[],
+  cycle: CycleType,
+  now: Date,
+  timezone: string,
+): number {
+  return currentStreak(
+    completedKeys,
+    cycle,
+    now,
+    timezone,
+    completedKeys.length,
+  );
+}
+
+/** The current streak of full days, as the statistics screen shows it. */
 export function currentDailyStreak(
   fullDayKeys: readonly string[],
   now: Date,
   timezone: string,
 ): number {
-  return currentStreak(fullDayKeys, 'DAILY', now, timezone, fullDayKeys.length);
+  return streakWithoutCap(fullDayKeys, 'DAILY', now, timezone);
 }
 
 export function buildStats(input: {

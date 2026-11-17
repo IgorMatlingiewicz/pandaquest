@@ -2,7 +2,9 @@ import type { TaskType } from '../generated/prisma/client';
 import {
   doneKey,
   doneSet,
+  dueTasks,
   isPeriodFull,
+  undoneDueTasks,
   type DueWindow,
   type FullPeriodTask,
 } from './full-period';
@@ -105,6 +107,28 @@ describe('isPeriodFull', () => {
       );
       expect(isPeriodFull(tasks, wrongKey, windowFor)).toBe(false);
     });
+  });
+});
+
+describe('undoneDueTasks', () => {
+  it('lists the due tasks that are not done, in their order', () => {
+    const tasks = [task('pills'), task('walk'), task('water')];
+    const undone = undoneDueTasks(tasks, done(['walk', TODAY.key]), today);
+    expect(undone.map((t) => t.id)).toEqual(['pills', 'water']);
+  });
+
+  it('leaves out a task added during the period: it is not due yet', () => {
+    const tasks = [task('pills'), task('read', 'DAILY', MONDAY_START)];
+    expect(undoneDueTasks(tasks, done(), today).map((t) => t.id)).toEqual([
+      'pills',
+    ]);
+  });
+
+  it('is empty when nothing is due, the same case isPeriodFull calls not full', () => {
+    const tasks = [task('read', 'DAILY', MONDAY_START)];
+    expect(dueTasks(tasks, today)).toEqual([]);
+    expect(undoneDueTasks(tasks, done(), today)).toEqual([]);
+    expect(isPeriodFull(tasks, done(), today)).toBe(false);
   });
 });
 
