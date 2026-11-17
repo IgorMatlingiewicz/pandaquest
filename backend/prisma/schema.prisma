@@ -40,6 +40,7 @@ model User {
   favoriteBadges FavoriteBadge[]
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
   receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
+  shownReminders ReminderShown[]
   @@map("users")
 }
 
@@ -322,4 +323,23 @@ model StreakAttempt {
   // counts are grouped by this column.
   @@index([goalId])
   @@map("streak_attempts")
+}
+
+// An in-app reminder the user has confirmed, so GET /reminders leaves it
+// out. The reminders themselves are worked out on request, never stored.
+// The key names what it reminded of (formats in reminders.logic.ts):
+// daily:<YYYY-MM-DD>, weekly:<YYYY-Www> or friend_invite:<friendship id>.
+// A plain string, with no foreign key to the friendship: the row says only
+// "this was shown", and old rows are cleaned up when the user confirms.
+model ReminderShown {
+  id      String   @id @default(uuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key     String
+  shownAt DateTime @default(now())
+
+  // One row per reminder, so confirming twice stores it once. Its leading
+  // column also serves "every row of this user".
+  @@unique([userId, key])
+  @@map("shown_reminders")
 }

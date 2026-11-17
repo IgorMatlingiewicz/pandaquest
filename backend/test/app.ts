@@ -1,16 +1,21 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-/** The whole API, set up as main.ts sets it up, on the test database. */
-export async function createApp() {
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
+/**
+ * The whole API, set up as main.ts sets it up, on the test database.
+ * `configure` may swap a provider first, e.g. the reminders' clock.
+ */
+export async function createApp(
+  configure: (builder: TestingModuleBuilder) => TestingModuleBuilder = (b) => b,
+) {
+  const moduleRef = await configure(
+    Test.createTestingModule({ imports: [AppModule] }),
+  ).compile();
   const app: INestApplication<App> = moduleRef.createNestApplication();
   app.useGlobalPipes(new ValidationPipe());
   await app.init();
