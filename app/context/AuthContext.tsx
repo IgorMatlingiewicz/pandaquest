@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     async function loadStoredToken() {
@@ -116,6 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       username,
       password,
       timezone: getDeviceTimezone(),
+      // The example categories and tasks are written in it. Picked on the
+      // sign-up screen or taken from the device; after sign-up they are the
+      // user's own, and a later language change does not translate them.
+      language: i18n.language === "en" ? "en" : "pl",
     });
     if (!response.ok) {
       throw new Error(t(registerErrorKey(response.status)));
