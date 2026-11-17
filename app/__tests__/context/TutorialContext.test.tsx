@@ -33,7 +33,7 @@ describe("TutorialProvider", () => {
     jest.clearAllMocks();
     server = fakeServer();
     loggedInAs(user("NOT_STARTED"));
-    jest.mocked(useRewards).mockReturnValue({ report, hold });
+    jest.mocked(useRewards).mockReturnValue({ report, hold, pending: false });
     refreshUser.mockResolvedValue(null);
     report.mockResolvedValue(undefined);
   });

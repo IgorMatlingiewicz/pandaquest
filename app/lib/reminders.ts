@@ -25,6 +25,12 @@ export type ReminderView = {
   keys: string[];
 };
 
+/**
+ * The most keys POST /reminders/ack takes at once (MAX_REMINDERS in the
+ * backend), which is also the most one GET returns.
+ */
+export const ACK_LIMIT = 10;
+
 type OfType<T extends Reminder["type"]> = Extract<Reminder, { type: T }>;
 
 const ofType = <T extends Reminder["type"]>(

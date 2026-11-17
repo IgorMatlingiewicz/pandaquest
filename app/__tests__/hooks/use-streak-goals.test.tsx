@@ -103,7 +103,11 @@ describe("streak goal hooks", () => {
     jest.clearAllMocks();
     report.mockResolvedValue(undefined);
     jest.mocked(useAuth).mockReturnValue({ token: "token" } as never);
-    jest.mocked(useRewards).mockReturnValue({ report, hold: () => () => {} });
+    jest.mocked(useRewards).mockReturnValue({
+      report,
+      hold: () => () => {},
+      pending: false,
+    });
   });
 
   afterEach(() => {

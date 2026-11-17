@@ -26,6 +26,11 @@ type RewardsContextType = {
    * each other. Toasts are not held.
    */
   hold: () => () => void;
+  /**
+   * A reward window is on screen or waiting in the queue, held or not.
+   * Windows that come after rewards (the reminders) wait while it is true.
+   */
+  pending: boolean;
 };
 
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
@@ -98,7 +103,9 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <RewardsContext.Provider value={{ report, hold }}>
+    <RewardsContext.Provider
+      value={{ report, hold, pending: queue.length > 0 }}
+    >
       {children}
       <RewardModal
         reward={holds > 0 ? null : (queue[0] ?? null)}

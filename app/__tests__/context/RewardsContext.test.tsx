@@ -52,9 +52,10 @@ describe("RewardsProvider", () => {
   const refreshUser = jest.fn();
   let report: (outcome: RewardOutcome) => Promise<void>;
   let hold: () => () => void;
+  let pending: boolean;
 
   function Capture() {
-    ({ report, hold } = useRewards());
+    ({ report, hold, pending } = useRewards());
     return null;
   }
 
@@ -112,6 +113,28 @@ describe("RewardsProvider", () => {
 
     closeWindow();
     expect(shownWindow()).toBeNull();
+  });
+
+  it("says a window is pending until the last one is closed, held ones too", async () => {
+    render(app());
+    expect(pending).toBe(false);
+
+    // Plain XP is a toast: nothing for later windows to wait for.
+    await send({ xpAward, badgesEarned: [] });
+    expect(pending).toBe(false);
+
+    let release: () => void = () => {};
+    act(() => {
+      release = hold();
+    });
+    await send({ badgesEarned: [badge("first_day")] });
+    expect(shownWindow()).toBeNull();
+    expect(pending).toBe(true);
+
+    act(() => release());
+    expect(pending).toBe(true);
+    closeWindow();
+    expect(pending).toBe(false);
   });
 
   it("announces a level gained from badge XP alone, after the badge", async () => {
