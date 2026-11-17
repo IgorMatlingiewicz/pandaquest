@@ -96,6 +96,18 @@ describe('reminders', () => {
   const keysOf = async (who: Person) =>
     (await getReminders(who)).reminders.map((r) => r.key);
 
+  /**
+   * The reminder key of a friend request, read from the database: its
+   * friendship id and the moment it was sent, in milliseconds.
+   */
+  const inviteKey = async (friendshipId: string) => {
+    const { createdAt } = await prisma.friendship.findUniqueOrThrow({
+      where: { id: friendshipId },
+      select: { createdAt: true },
+    });
+    return `friend_invite:${friendshipId}:${createdAt.getTime()}`;
+  };
+
   // A friend request sent as the app sends it: by the other one's code.
   const codeOf = async (who: Person) =>
     (
@@ -339,35 +351,25 @@ describe('reminders', () => {
       const [ola, kuba] = [await person(), await person()];
 
       const fromOla = await ask(ola, me);
+      const olaKey = await inviteKey(fromOla);
       expect(await getReminders(me)).toEqual({
         reminders: [
-          {
-            key: `friend_invite:${fromOla}`,
-            type: 'FRIEND_INVITE',
-            payload: { count: 1 },
-          },
+          { key: olaKey, type: 'FRIEND_INVITE', payload: { count: 1 } },
         ],
       });
 
       const fromKuba = await ask(kuba, me);
+      const kubaKey = await inviteKey(fromKuba);
       expect((await getReminders(me)).reminders).toEqual([
-        {
-          key: `friend_invite:${fromKuba}`,
-          type: 'FRIEND_INVITE',
-          payload: { count: 2 },
-        },
-        {
-          key: `friend_invite:${fromOla}`,
-          type: 'FRIEND_INVITE',
-          payload: { count: 2 },
-        },
+        { key: kubaKey, type: 'FRIEND_INVITE', payload: { count: 2 } },
+        { key: olaKey, type: 'FRIEND_INVITE', payload: { count: 2 } },
       ]);
 
       await api()
         .post(`/friends/requests/${fromOla}/accept`)
         .set(me.auth)
         .expect(200);
-      expect(await keysOf(me)).toEqual([`friend_invite:${fromKuba}`]);
+      expect(await keysOf(me)).toEqual([kubaKey]);
 
       await api()
         .post(`/friends/requests/${fromKuba}/decline`)
@@ -397,16 +399,51 @@ describe('reminders', () => {
       const old = await ask(await person(), me);
       const fresh = await ask(await person(), me);
       await prisma.reminderShown.create({
-        data: { userId: me.id, key: `friend_invite:${old}` },
+        data: { userId: me.id, key: await inviteKey(old) },
       });
 
       expect((await getReminders(me)).reminders).toEqual([
         {
-          key: `friend_invite:${fresh}`,
+          key: await inviteKey(fresh),
           type: 'FRIEND_INVITE',
           payload: { count: 1 },
         },
       ]);
+    });
+
+    it('reminds once more of a request sent again after a decline', async () => {
+      // As the app goes: shown and confirmed, declined, sent again.
+      const [me, ola] = [await person(), await person()];
+      const first = await ask(ola, me);
+      const firstKey = await inviteKey(first);
+      const shown = (await getReminders(me)).reminders.map((r) => r.key);
+      await api()
+        .post('/reminders/ack')
+        .set(me.auth)
+        .send({ keys: shown })
+        .expect(204);
+      expect(await keysOf(me)).toEqual([]);
+      await api()
+        .post(`/friends/requests/${first}/decline`)
+        .set(me.auth)
+        .expect(200);
+      // Past the cooldown on asking again, counted from the answer.
+      await prisma.friendship.update({
+        where: { id: first },
+        data: { respondedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) },
+      });
+
+      const again = await ask(ola, me);
+      const againKey = await inviteKey(again);
+
+      // One row per pair: the same friendship, sent at a new moment.
+      expect(again).toBe(first);
+      expect(againKey).not.toBe(firstKey);
+      const { reminders } = await getReminders(me);
+      expect(reminders.map((r) => [r.type, r.payload])).toEqual([
+        ['FRIEND_INVITE', { count: 1 }],
+      ]);
+      expect(reminders[0].key).toBe(againKey);
     });
 
     it(`returns at most ${MAX_REMINDERS}, the newest first, with the true count`, async () => {
@@ -427,7 +464,7 @@ describe('reminders', () => {
       const { reminders } = await getReminders(me);
 
       expect(reminders).toHaveLength(MAX_REMINDERS);
-      expect(reminders[0].key).toBe(`friend_invite:${ids[ids.length - 1]}`);
+      expect(reminders[0].key).toBe(await inviteKey(ids[ids.length - 1]));
       expect(reminders.every((r) => r.type === 'FRIEND_INVITE')).toBe(true);
       expect(reminders[0].payload).toEqual({ count: MAX_REMINDERS + 2 });
     });
@@ -499,7 +536,7 @@ describe('reminders', () => {
       const fresh = await ask(await person(), me);
       expect((await getReminders(me)).reminders).toEqual([
         {
-          key: `friend_invite:${fresh}`,
+          key: await inviteKey(fresh),
           type: 'FRIEND_INVITE',
           payload: { count: 1 },
         },
@@ -597,7 +634,11 @@ describe('reminders', () => {
       ['an unknown prefix', { keys: ['monthly:2026-11'] }],
       ['a malformed day', { keys: ['daily:2026-11-1'] }],
       ['a malformed week', { keys: ['weekly:2026-46'] }],
-      ['a friend request that is not a UUID', { keys: ['friend_invite:1'] }],
+      ['a friend request that is not a UUID', { keys: ['friend_invite:1:1'] }],
+      [
+        'a friend request without its moment',
+        { keys: ['friend_invite:3f2a9c1e-5b7d-4e8f-9a0b-1c2d3e4f5a6b'] },
+      ],
       [
         'one bad key among good ones',
         { keys: ['daily:2026-11-11', 'weekly:2026-W46', 'oops'] },
@@ -614,19 +655,14 @@ describe('reminders', () => {
       const [me, other] = [await person(), await person()];
       await addTask(other, 'DAILY');
       // A key of someone else's friend request hides nothing for them.
-      const theirs = await ask(await person(), other);
+      const theirs = await inviteKey(await ask(await person(), other));
 
-      await ack(me, {
-        keys: ['daily:2026-11-11', `friend_invite:${theirs}`],
-      }).expect(204);
+      await ack(me, { keys: ['daily:2026-11-11', theirs] }).expect(204);
 
       expect(
         await prisma.reminderShown.count({ where: { userId: other.id } }),
       ).toBe(0);
-      expect(await keysOf(other)).toEqual([
-        'daily:2026-11-11',
-        `friend_invite:${theirs}`,
-      ]);
+      expect(await keysOf(other)).toEqual(['daily:2026-11-11', theirs]);
     });
 
     describe(`removes rows older than ${SHOWN_RETENTION_DAYS} days`, () => {
@@ -634,6 +670,8 @@ describe('reminders', () => {
         const me = await person();
         const waiting = await ask(await person(), me);
         const accepted = await ask(await person(), me);
+        const waitingKey = await inviteKey(waiting);
+        const acceptedKey = await inviteKey(accepted);
         await api()
           .post(`/friends/requests/${accepted}/accept`)
           .set(me.auth)
@@ -643,8 +681,11 @@ describe('reminders', () => {
             { key: 'daily:2026-10-01', shownAt: daysBefore(41) },
             { key: 'weekly:2026-W41', shownAt: daysBefore(31) },
             { key: 'daily:2026-10-14', shownAt: daysBefore(29) },
-            { key: `friend_invite:${waiting}`, shownAt: daysBefore(60) },
-            { key: `friend_invite:${accepted}`, shownAt: daysBefore(60) },
+            { key: waitingKey, shownAt: daysBefore(60) },
+            { key: acceptedKey, shownAt: daysBefore(60) },
+            // An earlier sending of the waiting one, declined since: only
+            // the key of the current sending is kept.
+            { key: `friend_invite:${waiting}:1`, shownAt: daysBefore(60) },
           ].map((row) => ({ ...row, userId: me.id })),
         });
 
@@ -653,7 +694,7 @@ describe('reminders', () => {
         expect((await rowsOf(me)).map((r) => r.key)).toEqual([
           'daily:2026-10-14',
           'daily:2026-11-11',
-          `friend_invite:${waiting}`,
+          waitingKey,
         ]);
         // The waiting request stays confirmed: no reminder comes back.
         expect(await keysOf(me)).toEqual([]);

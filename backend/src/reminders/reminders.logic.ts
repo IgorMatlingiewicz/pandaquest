@@ -51,13 +51,20 @@ export type CycleState = {
   completedKeys: readonly string[];
 };
 
+/** A friend request waiting for the user's answer. */
+export type PendingInvite = {
+  id: string;
+  /** When it was sent: Friendship.createdAt, set again by a re-send. */
+  sentAt: Date;
+};
+
 export type ReminderInput = {
   now: Date;
   timezone: string;
   daily: CycleState;
   weekly: CycleState;
   /** Incoming friend requests still PENDING, newest first. */
-  pendingInviteIds: readonly string[];
+  pendingInvites: readonly PendingInvite[];
   /** Keys the user has already confirmed (ReminderShown rows). */
   shownKeys: ReadonlySet<string>;
 };
@@ -75,8 +82,15 @@ export const dailyKey = (now: Date, timezone: string) =>
   `daily:${periodKey('DAILY', now, timezone)}`;
 export const weeklyKey = (now: Date, timezone: string) =>
   `weekly:${periodKey('WEEKLY', now, timezone)}`;
-export const friendInviteKey = (friendshipId: string) =>
-  `friend_invite:${friendshipId}`;
+/**
+ * One key per sending, not per friendship: a pair of users has one
+ * Friendship row for good, and asking again after a decline puts the same
+ * row (the same id) back to PENDING with a new createdAt. With the id alone
+ * the confirmed key of the first request would hide the reminder of the
+ * new one. The moment, in milliseconds as stored, tells the two apart.
+ */
+export const friendInviteKey = (invite: PendingInvite) =>
+  `friend_invite:${invite.id}:${invite.sentAt.getTime()}`;
 
 /**
  * Every key the three builders above can make, and nothing else: the shape
@@ -84,7 +98,7 @@ export const friendInviteKey = (friendshipId: string) =>
  * or the friend request exists; a key nobody is shown hides nothing.
  */
 export const REMINDER_KEY_PATTERN =
-  /^(daily:\d{4}-\d{2}-\d{2}|weekly:\d{4}-W\d{2}|friend_invite:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+  /^(daily:\d{4}-\d{2}-\d{2}|weekly:\d{4}-W\d{2}|friend_invite:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{1,15})$/;
 
 /** Confirmed keys from before this instant may be removed. */
 export function shownCutoff(now: Date): Date {
@@ -177,7 +191,7 @@ export function buildReminders(input: ReminderInput): Reminder[] {
     }
   }
 
-  const newInviteKeys = input.pendingInviteIds
+  const newInviteKeys = input.pendingInvites
     .map(friendInviteKey)
     .filter((key) => !shownKeys.has(key));
   for (const key of newInviteKeys) {

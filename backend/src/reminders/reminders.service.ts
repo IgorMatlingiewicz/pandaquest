@@ -8,6 +8,7 @@ import {
   friendInviteKey,
   shownCutoff,
   type CycleState,
+  type PendingInvite,
   type Reminder,
 } from './reminders.logic';
 
@@ -66,12 +67,7 @@ export class RemindersService {
         where: { userId },
         select: { cycleType: true, periodKey: true },
       }),
-      // Ids only: no name, code or anything else about who asked.
-      this.prisma.friendship.findMany({
-        where: { addresseeId: userId, status: 'PENDING' },
-        select: { id: true },
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      }),
+      this.pendingInvites(userId),
       this.prisma.reminderShown.findMany({
         where: { userId },
         select: { key: true },
@@ -95,7 +91,7 @@ export class RemindersService {
         timezone,
         daily: cycle('DAILY'),
         weekly: cycle('WEEKLY'),
-        pendingInviteIds: invites.map((invite) => invite.id),
+        pendingInvites: invites,
         shownKeys: new Set(shown.map((row) => row.key)),
       }),
     };
@@ -117,10 +113,7 @@ export class RemindersService {
     if (!user) throw new UnauthorizedException();
 
     const now = this.clock();
-    const waiting = await this.prisma.friendship.findMany({
-      where: { addresseeId: userId, status: 'PENDING' },
-      select: { id: true },
-    });
+    const waiting = await this.pendingInvites(userId);
 
     await this.prisma.$transaction([
       this.prisma.reminderShown.createMany({
@@ -131,9 +124,22 @@ export class RemindersService {
         where: {
           userId,
           shownAt: { lt: shownCutoff(now) },
-          key: { notIn: waiting.map((invite) => friendInviteKey(invite.id)) },
+          key: { notIn: waiting.map(friendInviteKey) },
         },
       }),
     ]);
+  }
+
+  /**
+   * Requests waiting for the user's answer, newest first: when each was
+   * sent, for its key, and nothing about who asked (no name, no code).
+   */
+  private async pendingInvites(userId: string): Promise<PendingInvite[]> {
+    const rows = await this.prisma.friendship.findMany({
+      where: { addresseeId: userId, status: 'PENDING' },
+      select: { id: true, createdAt: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    return rows.map((row) => ({ id: row.id, sentAt: row.createdAt }));
   }
 }

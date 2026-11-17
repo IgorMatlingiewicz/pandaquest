@@ -50,10 +50,15 @@ const input = (over: Partial<ReminderInput>): ReminderInput => ({
   timezone: WARSAW,
   daily: NOTHING,
   weekly: NOTHING,
-  pendingInviteIds: [],
+  pendingInvites: [],
   shownKeys: new Set(),
   ...over,
 });
+
+// A friend request sent the day before, at a moment with milliseconds.
+const SENT = at('2026-11-10T09:00:00.123Z');
+const invite = (id: string, sentAt = SENT) => ({ id, sentAt });
+const inviteKey = (id: string) => friendInviteKey(invite(id));
 
 describe('REMINDER_KEY_PATTERN', () => {
   const FRIENDSHIP = '3f2a9c1e-5b7d-4e8f-9a0b-1c2d3e4f5a6b';
@@ -65,8 +70,8 @@ describe('REMINDER_KEY_PATTERN', () => {
       // ISO week 53 and a week number below 10.
       weeklyKey(at('2027-01-01T12:00:00Z'), WARSAW),
       weeklyKey(at('2026-03-04T12:00:00Z'), WARSAW),
-      friendInviteKey(FRIENDSHIP),
-      friendInviteKey(randomUUID()),
+      friendInviteKey(invite(FRIENDSHIP)),
+      friendInviteKey(invite(randomUUID(), new Date())),
     ]) {
       expect(key).toMatch(REMINDER_KEY_PATTERN);
     }
@@ -84,11 +89,31 @@ describe('REMINDER_KEY_PATTERN', () => {
     ['something after the key', 'daily:2026-11-11x'],
     ['a space around the key', ' daily:2026-11-11'],
     ['a second line', 'daily:2026-11-11\ndaily:2026-11-12'],
-    ['a friend request that is not a UUID', 'friend_invite:abc'],
-    ['a UUID in capitals', `friend_invite:${FRIENDSHIP.toUpperCase()}`],
-    ['a UUID without dashes', `friend_invite:${FRIENDSHIP.replace(/-/g, '')}`],
+    ['a friend request that is not a UUID', 'friend_invite:abc:1'],
+    ['a UUID in capitals', `friend_invite:${FRIENDSHIP.toUpperCase()}:1`],
+    [
+      'a UUID without dashes',
+      `friend_invite:${FRIENDSHIP.replace(/-/g, '')}:1`,
+    ],
+    ['a friend request without its moment', `friend_invite:${FRIENDSHIP}`],
+    ['a moment that is not a number', `friend_invite:${FRIENDSHIP}:abc`],
+    ['a negative moment', `friend_invite:${FRIENDSHIP}:-1`],
+    ['a moment too long', `friend_invite:${FRIENDSHIP}:${'9'.repeat(16)}`],
   ])('refuses %s', (_, key) => {
     expect(key).not.toMatch(REMINDER_KEY_PATTERN);
+  });
+});
+
+describe('friendInviteKey', () => {
+  it('names the friendship and the moment it was sent, in milliseconds', () => {
+    expect(friendInviteKey(invite('f1'))).toBe(
+      'friend_invite:f1:1794301200123',
+    );
+  });
+
+  it('differs when the same friendship is asked again later', () => {
+    const again = invite('f1', at('2026-11-20T09:00:00Z'));
+    expect(friendInviteKey(again)).not.toBe(friendInviteKey(invite('f1')));
   });
 });
 
@@ -346,33 +371,40 @@ describe('buildReminders', () => {
 
   describe('friend requests', () => {
     it('gives one reminder per new request, each with the count of all', () => {
-      expect(buildReminders(input({ pendingInviteIds: ['f2', 'f1'] }))).toEqual(
-        [
-          {
-            key: 'friend_invite:f2',
-            type: 'FRIEND_INVITE',
-            payload: { count: 2 },
-          },
-          {
-            key: 'friend_invite:f1',
-            type: 'FRIEND_INVITE',
-            payload: { count: 2 },
-          },
-        ],
-      );
+      expect(
+        buildReminders(input({ pendingInvites: [invite('f2'), invite('f1')] })),
+      ).toEqual([
+        { key: inviteKey('f2'), type: 'FRIEND_INVITE', payload: { count: 2 } },
+        { key: inviteKey('f1'), type: 'FRIEND_INVITE', payload: { count: 2 } },
+      ]);
     });
 
     it('counts only the requests not confirmed yet', () => {
       const reminders = buildReminders(
         input({
-          pendingInviteIds: ['f3', 'f2', 'f1'],
-          shownKeys: new Set(['friend_invite:f2', 'friend_invite:f1']),
+          pendingInvites: [invite('f3'), invite('f2'), invite('f1')],
+          shownKeys: new Set([inviteKey('f2'), inviteKey('f1')]),
+        }),
+      );
+
+      expect(reminders).toEqual([
+        { key: inviteKey('f3'), type: 'FRIEND_INVITE', payload: { count: 1 } },
+      ]);
+    });
+
+    it('reminds again of a request sent again after a decline', () => {
+      // The same friendship row, back to PENDING with a new createdAt.
+      const again = invite('f1', at('2026-11-11T08:00:00Z'));
+      const reminders = buildReminders(
+        input({
+          pendingInvites: [again],
+          shownKeys: new Set([inviteKey('f1')]),
         }),
       );
 
       expect(reminders).toEqual([
         {
-          key: 'friend_invite:f3',
+          key: friendInviteKey(again),
           type: 'FRIEND_INVITE',
           payload: { count: 1 },
         },
@@ -381,20 +413,23 @@ describe('buildReminders', () => {
 
     it('shows them at any hour', () => {
       const reminders = buildReminders(
-        input({ now: at('2026-11-11T07:00:00Z'), pendingInviteIds: ['f1'] }),
+        input({
+          now: at('2026-11-11T07:00:00Z'),
+          pendingInvites: [invite('f1')],
+        }),
       );
       expect(reminders).toHaveLength(1);
     });
   });
 
   it(`returns at most ${MAX_REMINDERS}, daily and weekly first, with the true count`, () => {
-    const ids = Array.from({ length: 15 }, (_, i) => `f${15 - i}`);
+    const invites = Array.from({ length: 15 }, (_, i) => invite(`f${15 - i}`));
     const reminders = buildReminders(
       input({
         now: SUN_19_00,
         daily: openDay,
         weekly: openWeek,
-        pendingInviteIds: ids,
+        pendingInvites: invites,
       }),
     );
 
@@ -402,7 +437,7 @@ describe('buildReminders', () => {
     expect(reminders.slice(0, 3).map((r) => r.key)).toEqual([
       'daily:2026-11-15',
       'weekly:2026-W46',
-      'friend_invite:f15',
+      inviteKey('f15'),
     ]);
     expect(reminders[2].payload).toEqual({ count: 15 });
   });
@@ -413,7 +448,7 @@ describe('buildReminders', () => {
         now: SUN_19_00,
         daily: { ...openDay, completedKeys: ['2026-11-14'] },
         weekly: openWeek,
-        pendingInviteIds: ['f1'],
+        pendingInvites: [invite('f1')],
       }),
     );
     const leaves = (value: unknown): unknown[] =>

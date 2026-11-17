@@ -328,7 +328,8 @@ model StreakAttempt {
 // An in-app reminder the user has confirmed, so GET /reminders leaves it
 // out. The reminders themselves are worked out on request, never stored.
 // The key names what it reminded of (formats in reminders.logic.ts):
-// daily:<YYYY-MM-DD>, weekly:<YYYY-Www> or friend_invite:<friendship id>.
+// daily:<YYYY-MM-DD>, weekly:<YYYY-Www> or
+// friend_invite:<friendship id>:<sent at, in ms>.
 // A plain string, with no foreign key to the friendship: the row says only
 // "this was shown", and old rows are cleaned up when the user confirms.
 model ReminderShown {
