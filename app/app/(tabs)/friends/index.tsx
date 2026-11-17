@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { ChoiceChip } from "@/components/choice-chip";
 import { FriendsPanel } from "@/components/friends/friends-panel";
@@ -14,6 +14,8 @@ type Tab = "friends" | "requests";
 
 const TABS: Tab[] = ["friends", "requests"];
 
+const isTab = (value: unknown): value is Tab => TABS.includes(value as Tab);
+
 /*
  * Friends and requests, as tabs like those of the Progress screen: local
  * state, both panels mounted, the hidden one only not shown. One read feeds
@@ -23,7 +25,17 @@ export default function FriendsScreen() {
   const { t } = useTranslation();
   const friends = useFriends();
   const { state } = friends;
-  const [tab, setTab] = useState<Tab>("friends");
+  // ?tab=requests opens the requests (the reminders' "Go to Friends"). The
+  // screen stays mounted between visits, so a later link has to switch the
+  // tab itself; the param is cleared then, or it would win over the user's
+  // own choice of tab when the screen re-renders.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(isTab(tabParam) ? tabParam : "friends");
+  useEffect(() => {
+    if (!isTab(tabParam)) return;
+    setTab(tabParam);
+    router.setParams({ tab: undefined });
+  }, [tabParam]);
   const [refreshing, setRefreshing] = useState(false);
 
   const incoming =

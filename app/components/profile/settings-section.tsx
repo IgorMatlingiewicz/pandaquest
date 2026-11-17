@@ -10,6 +10,7 @@ import { Text } from "@/components/ui/text";
 import { Toast, ToastTitle, useToast } from "@/components/ui/toast";
 import { VStack } from "@/components/ui/vstack";
 import { useAuth } from "@/context/AuthContext";
+import { useReminders } from "@/context/RemindersContext";
 import { useTutorial } from "@/context/TutorialContext";
 import {
   useAppColorScheme,
@@ -21,6 +22,7 @@ import type { SupportedLanguage } from "@/i18n";
 
 const LANGUAGES: SupportedLanguage[] = ["pl", "en"];
 const SCHEMES: AppColorScheme[] = ["light", "dark"];
+const REMINDER_OPTIONS = ["on", "off"] as const;
 
 type ChoiceRowProps<T extends string> = {
   label: string;
@@ -56,6 +58,8 @@ function ChoiceRow<T extends string>({
 /*
  * Language and theme are the top bar's own controls once more, over the very
  * same state (i18next and ColorSchemeContext), so either place changes both.
+ * The reminders switch lives only here; RemindersContext keeps it on the
+ * device, as the language is kept.
  * Log out is the top bar's handler too, with no extra question, as there.
  */
 export function SettingsSection() {
@@ -65,6 +69,8 @@ export function SettingsSection() {
   const { language, changeLanguage } = useLanguage();
   const { submit, saving } = useChangePassword();
   const { start: startTutorial } = useTutorial();
+  const { enabled: remindersEnabled, setEnabled: setRemindersEnabled } =
+    useReminders();
   const toast = useToast();
   const [passwordOpen, setPasswordOpen] = useState(false);
 
@@ -108,6 +114,15 @@ export function SettingsSection() {
         onSelect={(value) => {
           if (value !== colorScheme) toggleColorScheme();
         }}
+      />
+      <ChoiceRow
+        label={t("profile.settings.reminders")}
+        options={REMINDER_OPTIONS.map((value) => ({
+          value,
+          label: t(`profile.settings.remindersOptions.${value}`),
+        }))}
+        selected={remindersEnabled ? "on" : "off"}
+        onSelect={(value) => setRemindersEnabled(value === "on")}
       />
 
       <VStack space="sm">
