@@ -115,9 +115,11 @@ export function TopBar() {
 
   return (
     // shrink-0: on web this is a flex item, and a long page below would
-    // otherwise squeeze it until its rows overlap.
+    // otherwise squeeze it until its rows overlap. Wider side padding with
+    // the links in the bar: on a wide screen 16 px puts the name and the
+    // level bar against the window's edges; a phone keeps the compact one.
     <VStack
-      className="shrink-0 bg-background border-b border-border px-4 pb-3"
+      className={`shrink-0 bg-background border-b border-border pb-3 ${inline ? "px-8" : "px-4"}`}
       style={{ paddingTop: insets.top + 12 }}
     >
       <HStack className="items-center justify-between">
