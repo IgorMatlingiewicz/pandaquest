@@ -592,6 +592,9 @@ export function createFakePrisma() {
       },
     },
     $transaction: <T>(run: (tx: unknown) => Promise<T>) => run(prisma),
+    // Only lockUserRow (SELECT ... FOR UPDATE) uses it. Nothing runs side
+    // by side here, so there is nothing to lock: it does nothing.
+    $queryRaw: () => Promise.resolve([]),
   };
 
   return {

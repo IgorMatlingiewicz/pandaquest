@@ -14,6 +14,7 @@ import {
   TaskType,
 } from '../generated/prisma/client';
 import { doneSet, isPeriodFull } from '../common/full-period';
+import { lockUserRow } from '../common/row-lock';
 import {
   getPeriodKey,
   getPeriodStart,
@@ -231,6 +232,8 @@ export class TaskService {
     // Everything a completion causes (state, parent sync, XP, badges)
     // commits or rolls back together.
     const outcome = await this.prisma.$transaction(async (tx) => {
+      // First: the user's other completions wait until this one commits.
+      await lockUserRow(tx, userId);
       if (periodKey) {
         if (Object.values(template).some((v) => v !== undefined)) {
           await tx.task.update({ where: { id }, data: template });
