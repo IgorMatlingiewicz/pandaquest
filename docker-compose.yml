@@ -1,3 +1,5 @@
+# The development database. The e2e tests use the same server: they create
+# their own database, pandaquest_test, and never touch this one.
 services:
   postgres:
     image: postgres:18.6
@@ -8,8 +10,18 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      # DB_PORT in .env when 5432 is taken by another Postgres.
+      - "${DB_PORT:-5432}:5432"
+    # "Up" is not "ready": Postgres takes a few seconds, longer on the first
+    # start. `docker compose up -d --wait` returns once this check passes.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
+      # From PostgreSQL 18 the image keeps its data under /var/lib/postgresql
+      # (PGDATA /var/lib/postgresql/18/docker); 17 and older used .../data.
       - pgdata:/var/lib/postgresql
 volumes:
   pgdata:
