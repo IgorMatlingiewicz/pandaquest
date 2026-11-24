@@ -1,0 +1,124 @@
+# Checks every push to main and every pull request: the backend against a
+# real Postgres (the same major version as docker-compose.yml), the app
+# without one. The two jobs run side by side.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes the older, still running check
+# pointless: cancel it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The workflow only reads the code.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (lint, types, unit and e2e tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        # As in docker-compose.yml: the same major version, 18.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: pandaquest
+          POSTGRES_PASSWORD: pandaquest
+          POSTGRES_DB: pandaquest
+        # The job waits until the database accepts connections.
+        options: >-
+          --health-cmd "pg_isready -U pandaquest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      # A database and a secret that exist only in this run. The e2e tests
+      # swap the database name for pandaquest_test (test/test-database.ts)
+      # and create that database themselves.
+      DATABASE_URL: postgresql://pandaquest:pandaquest@localhost:5432/pandaquest
+      JWT_SECRET: ci-only-secret
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The pnpm version comes from "packageManager" in the root package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The client is generated, not kept in git (src/generated is ignored).
+      - name: Generate the Prisma client
+        run: pnpm exec prisma generate --config prisma7.config.ts
+
+      # Every migration applies to an empty database, as on a new server.
+      - name: Apply the migrations
+        run: pnpm exec prisma migrate deploy --config prisma7.config.ts
+
+      # Without --fix: in CI a lint error must fail the run, not be fixed in
+      # a copy that is thrown away (the local "pnpm lint" fixes).
+      - name: Lint
+        run: pnpm exec eslint "{src,apps,libs,test}/**/*.ts"
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: E2E tests (real Postgres)
+        run: pnpm test:e2e
+
+  app:
+    name: App (lint, types, tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Expo writes this file when the dev server starts; it is ignored by
+      # git, as Expo advises, so CI writes it the same way. Without it the
+      # types of the tests' Node globals are missing.
+      - name: Create expo-env.d.ts
+        run: echo '/// <reference types="expo/types" />' > expo-env.d.ts
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test --ci
