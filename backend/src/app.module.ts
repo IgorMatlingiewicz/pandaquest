@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_PIPE } from '@nestjs/core';
 import { AppController } from './app.controller';
+import { createValidationPipe } from './common/validation-pipe';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -28,6 +30,11 @@ import { RemindersModule } from './reminders/reminders.module';
     RemindersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Here and not in main.ts: everything that builds AppModule, the e2e
+    // tests included, validates the same way.
+    { provide: APP_PIPE, useFactory: createValidationPipe },
+  ],
 })
 export class AppModule {}

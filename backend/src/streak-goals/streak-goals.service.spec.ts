@@ -81,7 +81,8 @@ describe('StreakGoalsService', () => {
     });
 
     it('ignores a date sent by the client', async () => {
-      // ValidationPipe has no whitelist here, so extra fields reach the DTO.
+      // The service on its own, without the ValidationPipe's whitelist in
+      // front: it must ignore extra fields itself.
       const body = { name: 'Słodycze', startedAt: '2020-01-01T00:00:00Z' };
 
       await service.create(OWNER, body);

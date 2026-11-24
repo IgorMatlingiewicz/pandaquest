@@ -3,8 +3,9 @@ import { IsString, MaxLength, MinLength } from 'class-validator';
 import { STREAK_GOAL_NAME_MAX_LENGTH } from '../streak-goals.config';
 
 export class CreateStreakGoalDto {
-  // Only the validated copy is trimmed: without `transform: true` the
-  // ValidationPipe passes on the original body, so the service trims again.
+  // With whitelist on, the ValidationPipe hands on the validated copy, so
+  // the name arrives trimmed. The service trims again all the same: it is
+  // the one that writes it, and it is also called without the pipe.
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
