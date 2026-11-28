@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "perf": "ts-node perf/run.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
@@ -58,6 +59,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.0.0",
+    "autocannon": "9.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

@@ -20,6 +20,7 @@ lerna-debug.log*
 /.nyc_output
 /reports
 /.stryker-tmp
+/perf/results
 
 # IDEs and editors
 /.idea

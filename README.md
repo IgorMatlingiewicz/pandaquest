@@ -111,6 +111,20 @@ echo '/// <reference types="expo/types" />' > expo-env.d.ts
 
 Hook przed commitem uruchamia ESLint i Prettier na dodanych plikach `.ts` i `.tsx`, więc może je przy okazji sformatować.
 
+## Test wydajności API
+
+Powtarzalny pomiar czterech endpointów (`GET /health`, `GET /tasks`, `GET /stats`, `PATCH /tasks/:id`) narzędziem autocannon. Wymaga działającej bazy z kroku 1, `backend/.env` z kroku 2 i wolnego portu 3100.
+
+```bash
+cd backend
+pnpm build   # test uruchamia zbudowany serwer (dist/main.js)
+pnpm perf    # ok. 17 minut; pnpm perf --drop usuwa na końcu bazę testową
+```
+
+Skrypt (`backend/perf/`) zakłada bazę `pandaquest_perf` w tym samym kontenerze, nakłada migracje i czyści ją na starcie. Na innej bazie odmówi działania, a deweloperskiej nie dotyka. Potem uruchamia serwer na porcie 3100 i przez API tworzy 50 kont po 28 zadań. Każdy scenariusz mierzy przy 10 i 50 połączeniach, każde połączenie jako osobny użytkownik: 5 s rozgrzewki, potem 30 s pomiaru, całość w 3 przebiegach. Wyniki trafiają do `backend/perf/results/` (poza gitem): surowe w `.json`, tabela median ze środowiskiem i parametrami w `.md`.
+
+Generator obciążenia i serwer działają na jednym komputerze, więc przed pomiarem podłącz zasilanie, ustaw tryb „Najlepsza wydajność” i zamknij ciężkie programy.
+
 ## Najczęstsze problemy
 
 | Objaw | Przyczyna i rozwiązanie |
